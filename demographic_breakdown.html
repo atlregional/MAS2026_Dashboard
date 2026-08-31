@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demographic Breakdown Dashboard | Metro Atlanta Speaks</title>
+<link rel="icon" href="assets/metro-atl-speaks.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <div class="site-header__inner">
+        <div class="site-header__logo"><img src="assets/metro-atl-speaks.svg" alt="Metro Atlanta Speaks" width="350"></div>
+        <h1 class="site-header__title">Demographic Breakdown Dashboard</h1>
+    </div>
+</header>
+
+<nav class="site-nav page-shell page-shell--wide">
+    <a href="index.html">Metro Summary</a>
+    <a href="demographic_breakdown.html" class="active">Demographic Breakdown</a>
+    <a href="faq.html">FAQ</a>
+</nav>
+
+<main class="page-shell page-shell--wide">
+    <div class="mobile-toggle-row">
+        <label><input type="checkbox" id="mobile-toggle"> 📱 Use Mobile View</label>
+    </div>
+
+    <div class="question-select-wrap" id="question-picker-container"></div>
+
+    <div class="controls-row">
+        <div class="controls-row__years">
+            <span class="field-label">Select Survey Year</span>
+            <div id="year-radio-group" class="year-radio-group"></div>
+        </div>
+        <div class="controls-row__mode">
+            <span class="field-label">Select Summary Type</span>
+            <div id="mode-pills" class="mode-pills"></div>
+        </div>
+    </div>
+
+    <span class="field-label">Select Demographic</span>
+    <div id="demo-segmented" class="demo-segmented"></div>
+
+    <div id="tip-container"></div>
+    <div id="crosstab-container"></div>
+    <div class="section-caption" id="crosstab-caption" style="display:none;">
+        Note: Remaining percentages are either Don't Know or Not Available.
+        Percentages may vary slightly from those reported in other MAS products, go to FAQ for more details.
+    </div>
+
+    <div id="historical-container"></div>
+</main>
+
+<footer class="site-footer page-shell page-shell--wide">
+    <hr class="section-divider">
+    <div class="site-footer__credit">
+        Survey Results Courtesy of the Kennesaw State University's A.L. Burruss Institute of Public Service &amp; Research and ARC Research &amp; Innovation
+    </div>
+    <div class="site-footer__logos">
+        <div class="site-footer__col">
+            <img src="assets/Fw_ltnUt_400x400.png" alt="KSU Burruss Institute" width="300">
+            <div><a class="link-button" href="https://www.kennesaw.edu/external-affairs/burruss-institute/index.php" target="_blank" rel="noopener">Visit KSU Burruss Institute</a></div>
+        </div>
+        <div class="site-footer__col">
+            <img src="assets/arc-logo-black-trans.png" alt="Atlanta Regional Commission" width="200">
+            <div><a class="link-button" href="https://atlantaregional.org/" target="_blank" rel="noopener">Visit Atlanta Regional Commission</a></div>
+        </div>
+        <div class="site-footer__col">
+            <div class="site-footer__more-data">More data from ARC Research &amp; Innovation</div>
+            <div>
+                <a class="link-button" href="https://atlantaregional.org/what-we-do/research-and-data/" target="_blank" rel="noopener">Visit ARC Research &amp; Innovation</a>
+                <a class="link-button" href="https://opendata.atlantaregional.org/" target="_blank" rel="noopener">Visit ARC Open Data</a>
+                <a class="link-button" href="https://33n.atlantaregional.com/" target="_blank" rel="noopener">Visit ARC 33°n Blog</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div class="scroll-indicator"></div>
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/mobileViews.js"></script>
+<script src="js/main.js"></script>
+<script src="js/demographicBreakdown.js"></script>
+</body>
+</html>

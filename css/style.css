@@ -1,0 +1,586 @@
+/* Shared site-wide styles -- ported from MAS_Dashboard_App/lib/chrome.py's
+   injected <style> block and lib/mobile_views.py's inline HTML styles (the
+   mobile card/list styles are reproduced here as real CSS classes instead
+   of being generated as inline `style="..."` per element in JS, a
+   simplification available here that Streamlit's markdown-based rendering
+   didn't have). Colors/spacing/fonts are the same hand-tuned values as the
+   server app; nothing here is a redesign. */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap');
+
+:root {
+    --font-family: 'Barlow', sans-serif;
+    --text-color: #36454F;       /* forced light-theme text color, matches .streamlit/config.toml */
+    --bg-color: #ffffff;
+    --heading-blue: #2364a0;     /* section headings: "Response Distribution", "Year-over-Year Trends", etc. */
+    --title-font-color: #59595b; /* chart title / caption muted gray */
+    --label-color: #333333;
+    --track-color: #ececec;
+    --border-gray: #808080;
+    --grid-color: #e5e5e5;
+    --header-bg: #f9f9f9;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family);
+    color: var(--text-color);
+    background: var(--bg-color);
+}
+
+a {
+    color: var(--heading-blue);
+}
+
+.page-shell {
+    max-width: 65rem;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+}
+
+/* Demographic Breakdown ran a slightly wider column (68rem vs 65rem) in
+   the server app -- preserved exactly, not unified. */
+.page-shell--wide {
+    max-width: 68rem;
+}
+
+/* --- Header --- */
+.site-header {
+    background-color: var(--header-bg);
+    padding: 20px 0;
+    margin-bottom: 1.5rem;
+}
+
+.site-header__inner {
+    max-width: 68rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.site-header__logo img {
+    height: 100px;
+    width: auto;
+    display: block;
+}
+
+.site-header__title {
+    color: var(--heading-blue);
+    font-size: 40px;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* --- Nav --- */
+.site-nav {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.75rem 0 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.site-nav a {
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--title-font-color);
+    padding-bottom: 4px;
+    border-bottom: 2px solid transparent;
+}
+
+.site-nav a:hover {
+    color: var(--heading-blue);
+}
+
+.site-nav a.active {
+    color: var(--heading-blue);
+    border-bottom-color: var(--heading-blue);
+}
+
+/* --- Intro blurb (Metro Summary only) --- */
+.intro-blurb {
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+}
+
+.intro-blurb .headline {
+    color: #F15B29;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.intro-blurb .subline {
+    color: #29ABE2;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.intro-blurb .fineprint {
+    color: var(--title-font-color);
+    font-size: 15px;
+    font-weight: 400;
+}
+
+/* --- Section headings --- */
+.section-heading {
+    color: var(--heading-blue);
+    font-size: 27px;
+    font-weight: bold;
+    margin: 0 0 0.75rem;
+}
+
+.section-divider {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 2rem 0;
+}
+
+.section-caption {
+    color: var(--title-font-color);
+    font-size: 14px;
+    margin-top: 0.5rem;
+}
+
+.info-box {
+    background: #e7f3fe;
+    border-left: 4px solid #29ABE2;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: 0.75rem;
+}
+
+.warning-box {
+    background: #fff6e5;
+    border-left: 4px solid #eda100;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: 0.75rem;
+}
+
+.tip-box {
+    font-size: 15px;
+    margin-top: 0.75rem;
+}
+
+/* --- Controls row: question picker, year radio, Topline/Detailed pill --- */
+.controls-row {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.controls-row__years {
+    flex: 3 1 320px;
+}
+
+.controls-row__mode {
+    flex: 1 1 160px;
+}
+
+.field-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--label-color);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.question-select-wrap {
+    margin-bottom: 1rem;
+}
+
+select.question-select {
+    width: 100%;
+    font-family: var(--font-family);
+    font-size: 15px;
+    padding: 8px 10px;
+    border: 2px solid var(--border-gray);
+    border-radius: 5px;
+    background: white;
+    color: var(--text-color);
+}
+
+.field-help {
+    font-size: 12px;
+    color: #808080;
+    margin-top: 4px;
+}
+
+/* Year radio, rendered as a horizontal pill group (matches st.radio(horizontal=True)) */
+.year-radio-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.year-radio-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    padding: 4px 10px;
+    border: 1px solid #cfcfcf;
+    border-radius: 16px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.year-radio-group input[type="radio"] {
+    accent-color: var(--heading-blue);
+}
+
+.year-radio-group label.selected {
+    border-color: var(--heading-blue);
+    background: #eaf3fb;
+}
+
+/* Topline/Detailed pill selector (mirrors st.pills) */
+.mode-pills {
+    display: inline-flex;
+    border: 1px solid #cfcfcf;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.mode-pills button {
+    font-family: var(--font-family);
+    font-size: 14px;
+    padding: 6px 16px;
+    border: none;
+    background: white;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.mode-pills button.selected {
+    background: var(--heading-blue);
+    color: white;
+}
+
+/* Demographic segmented control (mirrors st.segmented_control) */
+.demo-segmented {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 1rem 0;
+}
+
+.demo-segmented button {
+    font-family: var(--font-family);
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 1px solid #cfcfcf;
+    border-radius: 16px;
+    background: white;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.demo-segmented button.selected {
+    background: var(--heading-blue);
+    border-color: var(--heading-blue);
+    color: white;
+}
+
+/* --- Chart container --- */
+.chart-container {
+    width: 100%;
+}
+
+/* --- Mobile: label-above-bar rows (ported from mobile_views._bar_row_html) --- */
+.bar-row {
+    margin-bottom: 14px;
+}
+
+.bar-row__label {
+    font-size: 14px;
+    color: var(--label-color);
+    margin-bottom: 4px;
+    line-height: 1.35;
+}
+
+.bar-row__track-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bar-row__track {
+    flex: 1 1 auto;
+    background: var(--track-color);
+    border-radius: 4px;
+    height: 16px;
+    overflow: hidden;
+}
+
+.bar-row__fill {
+    height: 100%;
+    border-radius: 4px;
+}
+
+.bar-row__pct {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--label-color);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* Mobile topline list title (mirrors render_response_bar_list's italic caption) */
+.mobile-topline-title {
+    font-style: italic;
+    color: var(--title-font-color);
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+/* --- Mobile demographic cards (ported from mobile_views.render_demographic_card_list) --- */
+.demo-card-heading {
+    font-weight: 600;
+    color: var(--heading-blue);
+    font-size: 19px;
+    line-height: 1.3;
+}
+
+.demo-card-subtitle {
+    color: var(--title-font-color);
+    font-size: 15px;
+    margin-top: 4px;
+    margin-bottom: 14px;
+}
+
+.demo-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+}
+
+.demo-card.selected {
+    border: 2px solid var(--title-font-color);
+}
+
+.demo-card__header {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--label-color);
+    margin-bottom: 10px;
+}
+
+.demo-card__button {
+    width: 100%;
+    font-family: var(--font-family);
+    font-size: 14px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    border: 1px solid var(--heading-blue);
+    border-radius: 5px;
+    background: white;
+    color: var(--heading-blue);
+    cursor: pointer;
+}
+
+.demo-card__button:hover {
+    background: #eaf3fb;
+}
+
+/* --- Mobile question picker (ported from mobile_views.render_question_picker) --- */
+.mobile-qpicker {
+    border: 1px solid #cfcfcf;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.mobile-qpicker__summary {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    list-style: none;
+}
+
+.mobile-qpicker__summary::-webkit-details-marker {
+    display: none;
+}
+
+.mobile-qpicker__body {
+    padding: 0 12px 12px;
+}
+
+.mobile-qpicker__caption {
+    font-size: 12px;
+    color: #808080;
+    margin-bottom: 6px;
+}
+
+.mobile-qpicker__option {
+    width: 100%;
+    text-align: left;
+    font-family: var(--font-family);
+    font-size: 14px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background: white;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.mobile-qpicker__option:disabled {
+    background: #eaf3fb;
+    border-color: var(--heading-blue);
+    color: var(--heading-blue);
+    cursor: default;
+}
+
+/* --- Mobile display-mode toggle --- */
+.mobile-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+    font-size: 14px;
+}
+
+/* --- Footer --- */
+.site-footer {
+    margin-top: 2.5rem;
+}
+
+.site-footer__credit {
+    font-size: 14px;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+}
+
+.site-footer__logos {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.site-footer__col {
+    flex: 1 1 220px;
+    text-align: center;
+}
+
+.site-footer__col img {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 0.75rem;
+}
+
+.link-button {
+    display: inline-block;
+    font-family: var(--font-family);
+    font-size: 13px;
+    padding: 6px 14px;
+    margin: 3px;
+    border: 1px solid var(--border-gray);
+    border-radius: 5px;
+    background: white;
+    color: var(--text-color);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.link-button:hover {
+    background: #f2f2f2;
+}
+
+.site-footer__more-data {
+    color: var(--heading-blue);
+    font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+/* --- Scroll indicator (purely decorative in the server app too -- the CSS
+   rule shipped on every page, but no click handler was ever wired to it
+   there either; ported as-is rather than "fixing" pre-existing dead code) --- */
+.scroll-indicator {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background-color: #2364a0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0.8;
+}
+
+.scroll-indicator::before {
+    content: "\2193";
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* --- FAQ page --- */
+.faq-item {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.faq-item__summary {
+    padding: 12px 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 15px;
+    list-style: none;
+}
+
+.faq-item__summary::-webkit-details-marker {
+    display: none;
+}
+
+.faq-item__body {
+    padding: 0 14px 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+/* --- Loading / empty states --- */
+.loading-note {
+    color: var(--title-font-color);
+    font-size: 14px;
+    padding: 2rem 0;
+}
+
+@media (max-width: 768px) {
+    .site-header__logo img {
+        height: 60px;
+    }
+    .site-header__title {
+        font-size: 26px;
+    }
+    .page-shell, .page-shell--wide {
+        padding: 0 1rem 2rem;
+    }
+    .site-footer__logos {
+        flex-direction: column;
+    }
+}
