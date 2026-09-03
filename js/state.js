@@ -68,20 +68,16 @@ const SharedState = (() => {
         _set(KEYS.year, yearValue);
     }
 
-    /** Seeded once per session from the real viewport width; the checkbox
-     * (or any later resize) can override it in either direction from then
-     * on, exactly like the server app's checkbox-overrides-detection
-     * contract. */
+    /** Seeded once per session from the real viewport width via
+     * matchMedia; there is no manual override anymore (the old "Use
+     * Mobile View" checkbox was removed), so this is the sole source of
+     * truth for the rest of the session/tab. */
     function getIsMobile() {
         const val = _get(KEYS.isMobile, null);
         if (val !== null) return val;
         const detected = window.matchMedia("(max-width: 768px)").matches;
         _set(KEYS.isMobile, detected);
         return detected;
-    }
-
-    function setIsMobile(value) {
-        _set(KEYS.isMobile, value);
     }
 
     function getSavedDemographic(defaultValue) {
@@ -110,7 +106,6 @@ const SharedState = (() => {
         getSharedYear,
         setSharedYear,
         getIsMobile,
-        setIsMobile,
         getSavedDemographic,
         setSavedDemographic,
         getSelectedDemoValue,

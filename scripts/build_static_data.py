@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 """Precomputes every real (question, year[, demographic]) view's fully-
-resolved chart data into one static JSON file for the hand-written JS
-static build to read at runtime -- no Python/pandas at runtime, just
-lookup + render.
+resolved chart data into one static JSON file for the hand-written JS static
+build to read at runtime -- no Python/pandas at runtime, just lookup + render.
 
-This is a build-time-only tool: it imports lib/ directly from the sibling
-MAS_Dashboard_App/ project (the same aggregation/config-resolution code
-already verified via that project's scripts/validate_against_golden.py
-and scripts/smoke_test_charts.py), so none of the subtle data logic
-(weight-column selection, the Atlanta oversample special case, response
-aliasing/sorting/coloring) gets re-derived or re-debugged here -- it's
-computed once, correctly, and dumped to data/dashboard_data.json. Rerun
-this by hand whenever the source parquet or MAS_Dashboard_App/lib/
-changes (this script's output is not kept in sync automatically, same
-"regenerate by hand when it changes" pattern as config/chart_configs.yaml
-elsewhere in this workspace).
+This build-time-only tool has NO dependency on MAS_Dashboard_App. It reads
+two build-time inputs instead:
 
-Mirrors metro_summary.py's and demographic_breakdown.py's own control
-flow closely (same guards, same edge cases) rather than re-deriving the
-logic independently, to minimize the chance of silently diverging from
+  1. data/pipeline_input/{crosstab_long,questions_meta}.parquet -- produced by
+     MAS_Pipeline/main_crosstab.py (copy them here by hand after running that
+     script, same "regenerate by hand when it changes" pattern as everything
+     else in this workspace). Pure weighted survey facts: every response
+     category (DK included, nothing excluded), correctly weighted
+     (metrowt/countywt/atlwt already resolved -- this script never needs to
+     know which weight column was used). MAS_Pipeline deliberately has zero
+     knowledge of chart_configs.yaml/questions.yaml/demographics.yaml -- all
+     presentation decisions (sort order, colors, aliases, which responses to
+     hide) are this repo's own, applied below.
+  2. config/{chart_configs,questions,demographics}.yaml -- verbatim copies of
+     MAS_Dashboard_App/config/*.yaml (that remains their source of truth;
+     re-copy here if they change).
+
+scripts/lib/chart_config.py (a port of MAS_Dashboard_App/lib/chart_config.py)
+does the actual percent/exclude/alias/order/color resolution -- unchanged
+logic, just fed from the crosstab file instead of live grouped DataFrames.
+
+Mirrors metro_summary.py's and demographic_breakdown.py's own control flow
+closely (same guards, same edge cases) rather than re-deriving the logic
+independently, to minimize the chance of silently diverging from
 already-verified behavior.
 """
 
@@ -26,29 +34,21 @@ import json
 import sys
 from pathlib import Path
 
-SERVER_APP_DIR = Path("/Users/billhuang/Projects/MAS_Dashboard_App")
-sys.path.insert(0, str(SERVER_APP_DIR))
+import pandas as pd
 
-import pandas as pd  # noqa: E402
-
-from lib.aggregation import (  # noqa: E402
-    get_demographic_grouped,
-    get_demographic_historical_grouped,
-    get_metro_trend_grouped,
-    get_topline_grouped,
-)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.chart_config import (  # noqa: E402
+    fallback_color_map,
     load_chart_configs,
     load_demographics_config,
     load_questions_config,
     resolve_chart_config,
     resolve_demographic_grouping,
 )
-from lib.charts import fallback_color_map  # noqa: E402
-from lib.constants import CURRENT_SURVEY_YEAR  # noqa: E402
-from lib.data import load_survey_data  # noqa: E402
 
-OUT_PATH = Path(__file__).resolve().parent.parent / "data" / "dashboard_data.json"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PIPELINE_INPUT_DIR = REPO_ROOT / "data" / "pipeline_input"
+OUT_PATH = REPO_ROOT / "data" / "dashboard_data.json"
 
 
 def resolved_to_dict(resolved, percent_col="percent", response_col="response_display"):
@@ -63,8 +63,19 @@ def percents_by_response(df, response_col="response_display", percent_col="perce
     return dict(zip(df[response_col], df[percent_col]))
 
 
+def by_year_dict(resolved_data, percent_col="percent"):
+    """{year_str: {response_display: percent}} from a resolve_chart_config
+    result whose group_cols included "year"."""
+    out = {}
+    for year_val, sub in resolved_data.groupby("year"):
+        out[str(int(year_val))] = percents_by_response(sub, percent_col=percent_col)
+    return out
+
+
 def main():
-    df = load_survey_data()
+    crosstab = pd.read_parquet(PIPELINE_INPUT_DIR / "crosstab_long.parquet")
+    meta = pd.read_parquet(PIPELINE_INPUT_DIR / "questions_meta.parquet")
+
     chart_configs = load_chart_configs()
     questions_cfg = load_questions_config()
     question_map = questions_cfg["question_map"]
@@ -75,9 +86,18 @@ def main():
     demo_grp_order = demographics_cfg["demo_grp_order"]
     demo_grp_rename = demographics_cfg["demo_grp_rename"]
 
-    # Question display order: BIGPROBLEM first, then alphabetical --
-    # exactly matching both page scripts' own ordering.
-    q_shorts = df["q_short"].unique().tolist()
+    # The trend/historical charts always use *this* year's config across
+    # every year of data (see resolve_chart_config's docstring) -- a single
+    # global year, matching MAS_Dashboard_App/lib/constants.CURRENT_SURVEY_YEAR,
+    # not each question's own max year (which happens to be the same today,
+    # since main_dshbrd.py's filter_to_target_year already keeps only
+    # questions asked in the current year, but isn't guaranteed to stay that
+    # way and shouldn't be relied on implicitly).
+    current_survey_year = max(int(y) for y in meta["year"].unique())
+
+    # Question display order: BIGPROBLEM first, then alphabetical -- exactly
+    # matching both page scripts' own ordering.
+    q_shorts = meta["q_short"].unique().tolist()
     bigprob_q = [q for q in q_shorts if "BIGPROBLEM" in q]
     other_q = [q for q in q_shorts if "BIGPROBLEM" not in q]
     q_shorts_ordered = bigprob_q + sorted(other_q)
@@ -95,19 +115,15 @@ def main():
     for q_short in q_shorts_ordered:
         question = question_map[q_short]
         has_trend = question_hist.get(question, 0) == 1
-        df_question = df[df["question"] == question]
-        years = sorted(int(y) for y in df_question["survey year"].dropna().unique())
+        meta_question = meta[meta["question"] == question]
+        years = sorted(int(y) for y in meta_question["year"].unique())
         end_date = f"{max(years)}-12-31" if years else None
 
         question_config = chart_configs.get(question, {})
 
         verb_by_year = {}
-        for year in years:
-            df_yf = df_question[df_question["survey year"] == year]
-            if "q_verb" in df_yf.columns and len(df_yf):
-                verb_by_year[str(year)] = df_yf["q_verb"].iloc[0]
-            else:
-                verb_by_year[str(year)] = q_short
+        for row in meta_question.itertuples():
+            verb_by_year[str(row.year)] = row.q_verb
 
         questions_out.append(
             {
@@ -120,15 +136,17 @@ def main():
             }
         )
 
+        question_crosstab = crosstab[crosstab["question"] == question]
+
         # --- Topline (Metro Summary Response Distribution) ---
         for year in years:
-            grouped = get_topline_grouped(question, year)
+            grouped = question_crosstab[
+                (question_crosstab["year"] == year) & (question_crosstab["demo_type"] == "metroresp")
+            ]
             if len(grouped) == 0:
                 continue
             config = question_config.get(str(year), {})
-            resolved = resolve_chart_config(
-                grouped, config, value_col="metrowt", group_cols=None, default_sort="percent_desc"
-            )
+            resolved = resolve_chart_config(grouped, config, value_col="weight", group_cols=None, default_sort="percent_desc")
             sort_order, colors = resolved_to_dict(resolved)
             topline_out[f"{question}|{year}"] = {
                 "sort_order": sort_order,
@@ -139,21 +157,18 @@ def main():
 
         # --- Metro-wide Year-over-Year Trend (only if flagged) ---
         if has_trend:
-            grouped_trend = get_metro_trend_grouped(question)
+            grouped_trend = question_crosstab[question_crosstab["demo_type"] == "metroresp"]
             if len(grouped_trend) > 0:
-                trend_config = question_config.get(str(CURRENT_SURVEY_YEAR), {})
+                trend_config = question_config.get(str(current_survey_year), {})
                 resolved_trend = resolve_chart_config(
-                    grouped_trend, trend_config, value_col="metrowt", group_cols=["survey year"], default_sort="alpha"
+                    grouped_trend, trend_config, value_col="weight", group_cols=["year"], default_sort="alpha"
                 )
                 sort_order, colors = resolved_to_dict(resolved_trend)
-                by_year = {}
-                for year_str, sub in resolved_trend.data.groupby("survey year"):
-                    by_year[year_str] = percents_by_response(sub)
                 metro_trend_out[question] = {
                     "sort_order": sort_order,
                     "colors": colors,
                     "end_date": end_date,
-                    "by_year": by_year,
+                    "by_year": by_year_dict(resolved_trend.data),
                 }
                 total_trend += 1
 
@@ -164,15 +179,16 @@ def main():
         demo_values_seen: dict[str, set[str]] = {name: set() for name in demo_col_map}
 
         for year in years:
-            df_yf = df_question[df_question["survey year"] == year]
-            if len(df_yf) == 0:
+            year_crosstab = question_crosstab[question_crosstab["year"] == year]
+            if len(year_crosstab) == 0:
                 continue
             config = question_config.get(str(year), {})
 
             for selected_demographic, demo_column in demo_col_map.items():
-                grouped = get_demographic_grouped(question, year, demo_column, selected_demographic)
+                grouped = year_crosstab[year_crosstab["demo_type"] == demo_column]
                 if len(grouped) == 0:
                     continue
+                grouped = grouped.rename(columns={"demo_value": demo_column})
                 resolved = resolve_chart_config(
                     grouped, config, value_col="weight", group_cols=[demo_column], default_sort="percent_desc"
                 )
@@ -215,33 +231,26 @@ def main():
         if has_trend:
             for selected_demographic, demo_column in demo_col_map.items():
                 for demo_value in sorted(demo_values_seen[selected_demographic]):
-                    grouped_hist, weight_column = get_demographic_historical_grouped(
-                        question, selected_demographic, demo_column, demo_value
-                    )
-                    if grouped_hist is None or len(grouped_hist) == 0:
+                    grouped_hist = question_crosstab[
+                        (question_crosstab["demo_type"] == demo_column) & (question_crosstab["demo_value"] == demo_value)
+                    ]
+                    if len(grouped_hist) == 0:
                         continue
-                    hist_config = question_config.get(str(CURRENT_SURVEY_YEAR), {})
+                    hist_config = question_config.get(str(current_survey_year), {})
                     resolved_hist = resolve_chart_config(
-                        grouped_hist,
-                        hist_config,
-                        value_col=weight_column,
-                        group_cols=["survey year"],
-                        default_sort="alpha",
+                        grouped_hist, hist_config, value_col="weight", group_cols=["year"], default_sort="alpha"
                     )
                     sort_order, colors = resolved_to_dict(resolved_hist)
-                    by_year = {}
-                    for year_str, sub in resolved_hist.data.groupby("survey year"):
-                        by_year[year_str] = percents_by_response(sub)
                     historical_out[f"{question}|{selected_demographic}|{demo_value}"] = {
                         "sort_order": sort_order,
                         "colors": colors,
                         "end_date": end_date,
-                        "by_year": by_year,
+                        "by_year": by_year_dict(resolved_hist.data),
                     }
                     total_hist += 1
 
     output = {
-        "current_survey_year": CURRENT_SURVEY_YEAR,
+        "current_survey_year": current_survey_year,
         "questions": questions_out,
         "demographics": demographics_out,
         "topline": topline_out,

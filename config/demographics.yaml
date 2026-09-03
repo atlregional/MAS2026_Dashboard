@@ -1,0 +1,144 @@
+demo_col_map:
+  Jurisdiction: county
+  Race: black or white
+  Hispanic: latino
+  Gender: gender
+  Age: age group more categories
+  Yrs in Metro: years in metro Atl categorized
+  Education: education
+  Income: income
+  Homeownership: homeownership
+  Employment: employment status
+  Work Setting: remote worker status
+excluded_demographics:
+  Hispanic:
+  - DK
+  Gender:
+  - Identified with gender in different way
+  - DK
+  Education:
+  - DK
+  Income:
+  - DK
+  Homeownership:
+  - DK
+  Employment:
+  - Disabled
+  - DK
+  Work Setting:
+  - DK
+  Race:
+  - DK
+demo_grp_order:
+  Race:
+  - black
+  - white
+  - other
+  Hispanic:
+  - 'Yes'
+  - 'No'
+  Gender:
+  - Female
+  - Male
+  Yrs in Metro:
+  - 5 years or less
+  - 6-10 years
+  - 11-20 years
+  - 21-30 years
+  - over 30 years
+  Education:
+  - Less than high school
+  - High school or GED
+  - Some college or technical school
+  - BA or BS
+  - Graduate or Professional Degree
+  Income:
+  - Less than $25K
+  - $25K-60K
+  - $60k-$120K
+  - $120k-$250k
+  - Over $250k
+  - Refused
+  Employment:
+  - Working full-time
+  - Working part-time
+  - Unemployed but seeking work
+  - Unemployed and not looking for work
+  - Retired
+  Jurisdiction:
+  - Atlanta
+  - Butts
+  - Cherokee
+  - Clayton
+  - Cobb
+  - Coweta
+  - DeKalb
+  - Douglas
+  - Fayette
+  - Forsyth
+  - Fulton
+  - Gwinnett
+  - Henry
+  - Paulding
+  - Rockdale
+  Age:
+  - 18-34
+  - 35-49
+  - 50-64
+  - 65 and older
+  Homeownership:
+  - Own or lives with owner
+  - Rents or lives with renter
+  Work Setting:
+  - Work remotely all of the time
+  - Work remotely some of the time and from a place of business
+  - work at a place of business all the time
+demo_grp_rename:
+  Jurisdiction:
+    Atlanta: City of Atlanta
+    Cherokee: Cherokee County
+    Clayton: Clayton County
+    Cobb: Cobb County
+    DeKalb: DeKalb County
+    Douglas: Douglas County
+    Fayette: Fayette County
+    Forsyth: Forsyth County
+    Fulton: Fulton County
+    Gwinnett: Gwinnett County
+    Henry: Henry County
+    Rockdale: Rockdale County
+    Butts: Butts County
+    Coweta: Coweta County
+    Paulding: Paulding County
+  Race:
+    black: Black
+    white: White
+    other: Other
+  Age:
+    18-34: 18-34 yrs
+    35-49: 35-49 yrs
+    50-64: 50-64 yrs
+    65 and older: 65+ yrs
+  Yrs in Metro:
+    5 years or less: 5 yrs or less
+    6-10 years: 6-10 yrs
+    11-20 years: 11-20 yrs
+    21-30 years: 21-30 yrs
+    over 30 years: 30+ yrs
+  Income:
+    Less than $25K: Less than $25k
+    $25K-60K: $25k-$60k
+    $60K-$120K: $60k-$120k
+    $120k-$250k: $120k-$250k
+    Over $250k: $250k+
+    Refused: Refused
+  Employment:
+    Working full-time: Full-time
+    Working part-time: Part-time
+    Unemployed but seeking work: Unemployed (seeking)
+    Unemployed and not looking for work: Unemployed (not seeking)
+    Retired: Retired
+  Work Setting:
+    Work remotely all of the time: Remote All of Time
+    Work remotely some of the time and from a place of business: Hybrid
+    work at a place of business all the time: Fully In-Person

@@ -29,30 +29,40 @@ The hardest, most subtlety-laden part of this dashboard was never the
 UI -- it's the *data* logic: which weight column applies to which
 demographic, the Atlanta oversample special case, response
 aliasing/sorting/coloring, per-question custom orders and colors. None of
-that is re-implemented in JavaScript here. Instead:
+that is re-implemented in JavaScript here. Instead, it's split across two
+build-time-only stages, in two different repos, neither of which ships
+anything to the browser:
 
-- **`scripts/build_static_data.py`** (a **build-time-only** Python script,
-  run by a developer, never shipped to the browser) imports
-  `lib.aggregation`, `lib.chart_config`, and `lib.data` **directly from
-  the sibling `MAS_Dashboard_App/` project** (via `sys.path`) and calls
-  the exact same `resolve_chart_config()` / `resolve_demographic_grouping()`
-  / `get_*_grouped()` functions already used and verified in that project,
-  once per real (question, year[, demographic[, value]]) combination. The
-  fully-resolved output (sort orders, colors, percentages) is written to
+- **`MAS_Pipeline/main_crosstab.py`** owns the *data* half: which weight
+  column applies to which demographic (metrowt/countywt/atlwt, including
+  the Atlanta oversample special case). It reads `MAS_Pipeline`'s own
+  cleaned survey parquet and writes `crosstab_long.parquet` -- raw weighted
+  sums per (question, year, demographic type, demographic value, response),
+  every response category included (DK and all; response exclusion doesn't
+  change a percentage's denominator, so it's a presentation decision, not a
+  data one -- see that script's docstring). Zero knowledge of this
+  dashboard's presentation choices.
+- **`scripts/build_static_data.py`** (this repo) owns the *presentation*
+  half: percent computation, response exclusion/aliasing, sort order,
+  colors, demographic exclusion/renaming/ordering -- via `scripts/lib/
+  chart_config.py`, a port of `MAS_Dashboard_App/lib/chart_config.py`'s
+  `resolve_chart_config()` / `resolve_demographic_grouping()`, driven by
+  this repo's own `config/*.yaml` (verbatim copies of `MAS_Dashboard_App/
+  config/*.yaml`). Reads `MAS_Pipeline`'s two output files (copied in by
+  hand to `data/pipeline_input/`) and writes the fully-resolved
   `data/dashboard_data.json`.
 - Every `.js` file's job is purely **lookup + render + interact** --
   looking up an already-resolved view in that JSON and drawing it, never
   recomputing anything from raw survey records.
-- This makes `scripts/build_static_data.py` -> `MAS_Dashboard_App/` the
-  one deliberate exception to this workspace's usual "independent sibling
-  projects, no shared imports" pattern, and only at build time, similar in
-  spirit to how `scripts/reconcile_chart_configs.py` referenced the old
-  `Streamlit_App` sibling during that project's original build-out.
+- This build has **no dependency on `MAS_Dashboard_App`** at all (neither
+  its code nor a live process) -- see "Rebuilding the data" below for the
+  full pipeline and why the split sits where it does.
 
 ## Project layout
 
 ```
-index.html                    # Metro Summary page (shell + nav)
+index.html                    # splash/landing page -- intro blurb + "Enter the Dashboard" CTA, no charts
+metro_summary.html            # Metro Summary dashboard page (shell + nav)
 demographic_breakdown.html    # Demographic Breakdown page
 faq.html                      # FAQ page (static content, no data)
 css/style.css                 # all styles -- ported from lib/chrome.py's CSS + lib/mobile_views.py's inline styles
@@ -61,13 +71,24 @@ js/
   state.js                    # cross-page shared state (sessionStorage-backed)
   charts.js                   # Plotly.js chart builders (desktop) -- mirrors lib/charts.py
   mobileViews.js               # label-above-bar / card-list HTML builders -- mirrors lib/mobile_views.py
-  main.js                     # small shared bootstrap (mobile toggle wiring)
+  questionPicker.js            # custom desktop question dropdown (colored category badge/trend label)
+  scrollIndicator.js           # shared bottom-right "scroll down" button, every page
+  splash.js                    # splash page controller -- appends the mobile "best on desktop" note to the blurb
   metroSummary.js              # Metro Summary page orchestration -- mirrors metro_summary.py
   demographicBreakdown.js      # Demographic Breakdown page orchestration -- mirrors demographic_breakdown.py
-data/dashboard_data.json      # precomputed data (see "Rebuilding the data" below)
+config/                       # chart_configs.yaml/questions.yaml/demographics.yaml -- verbatim copies of
+                               #   MAS_Dashboard_App/config/*.yaml, this build's presentation rules
+data/
+  dashboard_data.json          # precomputed data (see "Rebuilding the data" below)
+  pipeline_input/               # crosstab_long.parquet + questions_meta.parquet, copied by hand from MAS_Pipeline
 assets/                       # logos, copied from MAS_Dashboard_App/Assets/
-scripts/build_static_data.py  # the precompute script described above
+scripts/
+  build_static_data.py         # reads data/pipeline_input/*.parquet + config/*.yaml, writes dashboard_data.json
+  lib/chart_config.py          # ported from MAS_Dashboard_App/lib/chart_config.py (no Streamlit)
 ```
+
+The site logo in the header links back to `index.html` (the splash page) on
+every page; the nav bar's "Metro Summary" link goes to `metro_summary.html`.
 
 There is intentionally no `package.json`, no bundler config, and no
 framework. Every HTML page just loads Plotly.js from a pinned CDN URL and
@@ -87,27 +108,59 @@ python3 -m http.server 8000
 
 ## Rebuilding the data
 
-`data/dashboard_data.json` is **not** kept in sync automatically -- like
-`config/chart_configs.yaml` elsewhere in this workspace, it's a
-"regenerate by hand when the source changes" artifact. Re-run the build
-script whenever `MAS_Dashboard_App/Data/*.parquet`, `MAS_Dashboard_App/lib/`,
-or `MAS_Dashboard_App/config/*.yaml` change:
+This build has **no dependency on `MAS_Dashboard_App`** -- data flows from
+`MAS_Pipeline` (the ETL repo) directly into this one:
 
-```bash
-cd MAS_Dashboard_App          # the sibling project -- has the pixi env with pandas/pyarrow/plotly/streamlit
-pixi run -e dev python /path/to/MAS_Dashboard_App_Static_JS/scripts/build_static_data.py
+```
+MAS_Pipeline/
+  main_cln.py -> main_dshbrd.py -> MAS_Dashboard_Records_<year>_Updated.parquet
+  main_crosstab.py                 (NEW -- reads that parquet)
+       |
+       +--> crosstab_long.parquet    -- raw weighted sums, every response
+       |                                category incl. DK, weight column
+       |                                (metrowt/countywt/atlwt) already
+       |                                correctly resolved. Zero knowledge
+       |                                of chart_configs/questions/
+       |                                demographics.yaml -- MAS_Pipeline
+       |                                has no dashboard-specific opinions.
+       +--> questions_meta.parquet    -- question/year -> q_short/q_verb
+                                          lookup, no aggregation.
 ```
 
-(It imports `lib/`/`config/` from `MAS_Dashboard_App/`, so it needs to run
-in an environment with that project's dependencies installed -- its own
-`pixi` dev environment is the easiest way, even though the script itself
-lives in this sibling project.)
+Copy both files into this repo by hand (same "regenerate by hand when the
+source changes" pattern as everything else in this workspace):
+
+```bash
+cd MAS_Pipeline
+python3 main_cln.py && python3 main_dshbrd.py && python3 main_crosstab.py
+cp crosstab_long.parquet questions_meta.parquet \
+  /path/to/MAS_Dashboard_App_Static_JS/data/pipeline_input/
+```
+
+Then, in this repo, `scripts/build_static_data.py` reads those two files
+plus this repo's own `config/{chart_configs,questions,demographics}.yaml`
+(verbatim copies of `MAS_Dashboard_App/config/*.yaml` -- re-copy them here
+by hand if they ever change there) and applies all the presentation
+decisions -- percent computation, response exclusion/aliasing, sort order,
+colors, demographic exclusion/renaming/ordering -- via `scripts/lib/
+chart_config.py` (a port of `MAS_Dashboard_App/lib/chart_config.py`, same
+logic, no Streamlit):
+
+```bash
+python3 scripts/build_static_data.py
+```
+
+`MAS_Dashboard_App` (the Streamlit app) is completely unaffected by any of
+this -- it still works exactly as it did before, with its own independent
+copy of everything it needs.
 
 After regenerating, spot-check the new file against golden survey values
-the same way `MAS_Dashboard_App/scripts/validate_against_golden.py` does
-(bigprob 2025, metro-wide / Cherokee county / Male gender) before trusting
-it -- there is no runtime Python here to catch a bad regeneration, so this
-JSON *is* this build's correctness backstop.
+the same way `MAS_Pipeline/validate_against_arc_report.py` does (bigprob
+2025, metro-wide / Cherokee county / Male gender) before trusting it, and
+ideally deep-diff the new `dashboard_data.json` against the previous one --
+every difference should be explainable (a real data change) rather than a
+silent regression. There is no runtime Python here to catch a bad
+regeneration, so this JSON *is* this build's correctness backstop.
 
 ## Deploying
 
@@ -164,9 +217,13 @@ side-effect of its implementation rather than a real design choice:
   `User-Agent` reliably (`st.context.headers` is empty/synthetic in
   stlite; a real server sees it but the header is a notoriously unreliable
   signal anyway). This build checks the real browser viewport directly
-  (`window.matchMedia("(max-width: 768px)")`), seeded once per session and
-  overridable via the same checkbox the server app has -- a strictly more
-  direct signal, and free live updates on resize/rotation.
+  (`window.matchMedia("(max-width: 768px)")`), seeded once per session --
+  a strictly more direct signal than either prior build had. There's no
+  manual override control on the page anymore (the old "Use Mobile View"
+  checkbox was removed); mobile visitors instead see a sentence appended to
+  the end of the splash page's intro blurb noting the dashboard is best
+  viewed on desktop (see `splash.js`) -- read as part of the page's own
+  copy rather than an interruption.
 - **One shared "selected demographic value" key for both mobile and
   desktop**, instead of the server app's two independent ones (the
   desktop Plotly widget's own internal Streamlit state vs. mobile's

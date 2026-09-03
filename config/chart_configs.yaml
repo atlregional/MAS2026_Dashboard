@@ -1,0 +1,1027 @@
+bigprob:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Housing Affordability: '#FE6100'
+      Traffic: '#648FFF'
+      Economy: '#DC267F'
+      Crime: '#FFB000'
+      Local Tax Increases: '#BED77C'
+      Infrastructure: '#AE1EC7'
+      Quality of Local Schools: '#9DA786'
+      Public Health: '#425FA2'
+      Environmental Pollution: '#2D3A5A'
+      Other: '#AF1737'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Economy: '#DC267F'
+      Crime: '#FFB000'
+      Transportation: '#648FFF'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+  '2023':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Economy: '#DC267F'
+      Crime: '#FFB000'
+      Transportation: '#648FFF'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+  '2021':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Economy: '#DC267F'
+      Crime: '#FFB000'
+      Transportation: '#648FFF'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+  '2020':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Economy: '#DC267F'
+      Crime: '#FFB000'
+      Transportation: '#648FFF'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+  '2019':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Transportation: '#648FFF'
+      Crime: '#FFB000'
+      Economy: '#DC267F'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+  '2018':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Transportation: '#648FFF'
+      Crime: '#FFB000'
+      Economy: '#DC267F'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+  '2017':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Transportation: '#648FFF'
+      Crime: '#FFB000'
+      Economy: '#DC267F'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+  '2016':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Transportation: '#648FFF'
+      Crime: '#FFB000'
+      Economy: '#DC267F'
+      Human Services: '#AE1EC7'
+      Taxes: '#BED77C'
+      Public Health: '#425FA2'
+      Public Education: '#9DA786'
+      Race Relations: '#FE6100'
+      Other: '#AF1737'
+aienergy:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Increase energy consumption
+    - About the same
+    - Decrease energy consumption
+    custom_colors:
+      Increase energy consumption: '#FF9F58'
+      About the same: '#29ABE2'
+      Decrease energy consumption: '#3A80C1'
+aijob:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Increase the number of available jobs
+    - About the same
+    - Decrease the number of available jobs
+    custom_colors:
+      Increase the number of available jobs: '#FF9F58'
+      About the same: '#29ABE2'
+      Decrease the number of available jobs: '#3A80C1'
+aieasier:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Make life easier
+    - About the same
+    - Make life harder
+    custom_colors:
+      Make life easier: '#FF9F58'
+      About the same: '#29ABE2'
+      Make life harder: '#3A80C1'
+aiproductiv:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Increase business productivity
+    - About the same
+    - Decrease business productivity
+    custom_colors:
+      Increase business productivity: '#FF9F58'
+      About the same: '#29ABE2'
+      Decrease business productivity: '#3A80C1'
+finances:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better off
+    - About the same
+    - Worse off
+    custom_colors:
+      Better off: '#FF9F58'
+      About the same: '#29ABE2'
+      Worse off: '#3A80C1'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better off
+    - About the same
+    - Worse off
+    custom_colors:
+      Better off: '#FF9F58'
+      About the same: '#29ABE2'
+      Worse off: '#3A80C1'
+emerg:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2021':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2020':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2019':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2018':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2017':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+  '2016':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Cash, Check, or Debit
+    - Credit Card
+    - Borrow Someone's Money
+    - Sell or Pawn
+    - Not Able to Get Money
+    custom_colors:
+      Pay it with cash, check, or debit card: '#F15B29'
+      Put it on credit card: '#FF9F58'
+      Borrow money from someone: '#B4E2EC'
+      Sell or pawn something to get money: '#29ABE2'
+      Not able to get money right now: '#3A80C1'
+    response_aliases:
+      Pay it with cash, check, or debit card: Cash, Check, or Debit
+      Put it on credit card: Credit Card
+      Borrow money from someone: Borrow Someone's Money
+      Sell or pawn something to get money: Sell or Pawn
+      Not able to get money right now: Not Able to Get Money
+climtatlthrt:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - major threat
+    - minor threat
+    - no threat
+    custom_colors:
+      major threat: '#FF9F58'
+      minor threat: '#29ABE2'
+      no threat: '#3A80C1'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - major threat
+    - minor threat
+    - no threat
+    custom_colors:
+      major threat: '#FF9F58'
+      minor threat: '#29ABE2'
+      no threat: '#3A80C1'
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - major threat
+    - minor threat
+    - no threat
+    custom_colors:
+      major threat: '#FF9F58'
+      minor threat: '#29ABE2'
+      no threat: '#3A80C1'
+climtgblthrt:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - major global threat
+    - minor global threat
+    - no threat
+    custom_colors:
+      major global threat: '#FF9F58'
+      minor global threat: '#29ABE2'
+      no threat: '#3A80C1'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - major global threat
+    - minor global threat
+    - no threat
+    custom_colors:
+      major global threat: '#FF9F58'
+      minor global threat: '#29ABE2'
+      no threat: '#3A80C1'
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - major global threat
+    - minor global threat
+    - no threat
+    custom_colors:
+      major global threat: '#FF9F58'
+      minor global threat: '#29ABE2'
+      no threat: '#3A80C1'
+nomovnhood:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+houswage:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+housreason:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Developers building too expensive units: '#FE6100'
+      Investors buying properties to rent: '#648FFF'
+      Local zoning laws don't allow for building enough housing: '#DC267F'
+      Existing residents opposed to building affordable housing in neighborhood: '#FFB000'
+      Other: '#AF1737'
+    response_aliases:
+      Developers building too expensive units: Developers building too expensive units
+      Investors buying properties to rent: Investors buying properties to rent
+      Local zoning laws don't allow for building enough housing: Local Zoning Laws
+      Existing residents opposed to building affordable housing in neighborhood: Resident
+        Opposition
+      Other: Other
+lkahead:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2021':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2020':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2019':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2018':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2017':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+  '2016':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Better
+    - Same
+    - Worse
+    custom_colors:
+      Better: '#FF9F58'
+      Same: '#29ABE2'
+      Worse: '#3A80C1'
+move:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Stay where they are
+    - Move neighborhoods
+    - Move away from Atlanta
+    custom_colors:
+      Stay where they are now: '#FF9F58'
+      Move away from Atlanta: '#29ABE2'
+      Move to a different neighborhood: '#3A80C1'
+    response_aliases:
+      Stay where they are now: Stay where they are
+      Move away from Atlanta: Move away from Atlanta
+      Move to a different neighborhood: Move neighborhoods
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Stay where they are
+    - Move neighborhoods
+    - Move away from Atlanta
+    custom_colors:
+      Stay where they are now: '#FF9F58'
+      Move away from Atlanta: '#29ABE2'
+      Move to a different neighborhood: '#3A80C1'
+    response_aliases:
+      Stay where they are now: Stay where they are
+      Move away from Atlanta: Move away from Atlanta
+      Move to a different neighborhood: Move neighborhoods
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Stay where they are
+    - Move neighborhoods
+    - Move away from Atlanta
+    custom_colors:
+      Stay where they are now: '#FF9F58'
+      Move away from Atlanta: '#29ABE2'
+      Move to a different neighborhood: '#3A80C1'
+    response_aliases:
+      Stay where they are now: Stay where they are
+      Move away from Atlanta: Move away from Atlanta
+      Move to a different neighborhood: Move neighborhoods
+  '2018':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Stay where they are
+    - Move neighborhoods
+    - Move away from Atlanta
+    custom_colors:
+      Stay where they are now: '#FF9F58'
+      Move away from Atlanta: '#29ABE2'
+      Move to a different neighborhood: '#3A80C1'
+    response_aliases:
+      Stay where they are now: Stay where they are
+      Move away from Atlanta: Move away from Atlanta
+      Move to a different neighborhood: Move neighborhoods
+  '2017':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Stay where they are
+    - Move neighborhoods
+    - Move away from Atlanta
+    custom_colors:
+      Stay where they are now: '#FF9F58'
+      Move away from Atlanta: '#29ABE2'
+      Move to a different neighborhood: '#3A80C1'
+    response_aliases:
+      Stay where they are now: Stay where they are
+      Move away from Atlanta: Move away from Atlanta
+      Move to a different neighborhood: Move neighborhoods
+  '2016':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Stay where they are
+    - Move neighborhoods
+    - Move away from Atlanta
+    custom_colors:
+      Stay where they are now: '#FF9F58'
+      Move away from Atlanta: '#29ABE2'
+      Move to a different neighborhood: '#3A80C1'
+    response_aliases:
+      Stay where they are now: Stay where they are
+      Move away from Atlanta: Move away from Atlanta
+      Move to a different neighborhood: Move neighborhoods
+growth:
+  '2025':
+    exclude_responses:
+    - DK or NA
+    custom_colors:
+      in areas where businesses are already concentrated: '#FF9F58'
+      along transportation corridors that link existing business centers: '#29ABE2'
+      in currently undeveloped or more rural areas: '#3A80C1'
+      other: '#9DA786'
+    response_aliases:
+      in areas where businesses are already concentrated: Business centers
+      along transportation corridors that link existing business centers: Along corridors
+        linking centers
+      in currently undeveloped or more rural areas: Undeveloped or rural places
+      other: Other
+  '2024':
+    exclude_responses:
+    - DK or NA
+    custom_colors:
+      in areas where businesses are already concentrated: '#FF9F58'
+      along transportation corridors that link existing business centers: '#29ABE2'
+      in currently undeveloped or more rural areas: '#3A80C1'
+      other: '#9DA786'
+    response_aliases:
+      in areas where businesses are already concentrated: Business centers
+      along transportation corridors that link existing business centers: Along corridors
+        linking centers
+      in currently undeveloped or more rural areas: Undeveloped or rural places
+      other: Other
+  '2023':
+    exclude_responses:
+    - DK or NA
+    custom_colors:
+      in areas where businesses are already concentrated: '#FF9F58'
+      along transportation corridors that link existing business centers: '#29ABE2'
+      in currently undeveloped or more rural areas: '#3A80C1'
+      other: '#9DA786'
+    response_aliases:
+      in areas where businesses are already concentrated: Business centers
+      along transportation corridors that link existing business centers: Along corridors
+        linking centers
+      in currently undeveloped or more rural areas: Undeveloped or rural places
+      other: Other
+transport:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2023':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2019':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2018':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2017':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+  '2016':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Strongly agree
+    - Agree
+    - Disagree
+    - Strongly disagree
+    custom_colors:
+      Strongly agree: '#F15B29'
+      Agree: '#FF9F58'
+      Disagree: '#29ABE2'
+      Strongly disagree: '#3A80C1'
+fixtraf:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Expand public transit: '#FE6100'
+      Improve roads and highways: '#648FFF'
+      Develop communities where people can live where they work: '#AE1EC7'
+      Increase teleworking options: '#DC267F'
+      Do nothing: '#9DA786'
+      Other: '#2D3A5A'
+    response_aliases:
+      Expand public transit: Expand public transit
+      Improve roads and highways: Improve roads and highways
+      Develop communities where people can live where they work: Live work developments
+      Increase teleworking options: Increase teleworking
+      Do nothing: Do nothing
+      Other: Other
+  '2023':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Expand public transit: '#FE6100'
+      Improve roads and highways: '#648FFF'
+      Develop communities where people can live where they work: '#AE1EC7'
+      Increase teleworking options: '#DC267F'
+      Do nothing: '#9DA786'
+    response_aliases:
+      Expand public transit: Expand public transit
+      Improve roads and highways: Improve roads and highways
+      Develop communities where people can live where they work: Live work developments
+      Increase teleworking options: Increase teleworking
+      Do nothing: Do nothing
+  '2019':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Expand public transit: '#FE6100'
+      Improve roads and highways: '#648FFF'
+      Develop communities where people can live where they work: '#AE1EC7'
+      Do nothing: '#9DA786'
+    response_aliases:
+      Expand public transit: Expand public transit
+      Improve roads and highways: Improve roads and highways
+      Develop communities where people can live where they work: Live work developments
+      Do nothing: Do nothing
+  '2018':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Expand public transit: '#FE6100'
+      Improve roads and highways: '#648FFF'
+      Develop communities where people can live where they work: '#AE1EC7'
+      Do nothing: '#9DA786'
+    response_aliases:
+      Expand public transit: Expand public transit
+      Improve roads and highways: Improve roads and highways
+      Develop communities where people can live where they work: Live work developments
+      Do nothing: Do nothing
+  '2017':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Expand public transit: '#FE6100'
+      Improve roads and highways: '#648FFF'
+      Develop communities where people can live where they work: '#AE1EC7'
+      Do nothing: '#9DA786'
+    response_aliases:
+      Expand public transit: Expand public transit
+      Improve roads and highways: Improve roads and highways
+      Develop communities where people can live where they work: Live work developments
+      Do nothing: Do nothing
+  '2016':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Expand public transit: '#FE6100'
+      Improve roads and highways: '#648FFF'
+      Develop communities where people can live where they work: '#AE1EC7'
+      Do nothing: '#9DA786'
+    response_aliases:
+      Expand public transit: Expand public transit
+      Improve roads and highways: Improve roads and highways
+      Develop communities where people can live where they work: Live work developments
+      Do nothing: Do nothing
+findjob:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Good time
+    - Bad time
+    custom_colors:
+      Good time: '#FF9F58'
+      Bad time: '#3A80C1'
+  '2024':
+    exclude_responses:
+    - DK
+    custom_order:
+    - Good time
+    - Bad time
+    custom_colors:
+      Good time: '#FF9F58'
+      Bad time: '#3A80C1'
+workfrce:
+  '2025':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Providing more affordable housing options: '#FE6100'
+      Creating more training or retraining opportunities: '#648FFF'
+      Providing better transportation options to and from work: '#AE1EC7'
+      Improving K-12 education: '#FFB000'
+      Providing better access to higher education: '#AF1737'
+    response_aliases:
+      Providing more affordable housing options: Affordable housing
+      Creating more training or retraining opportunities: Training or retraining
+      Providing better transportation options to and from work: Transportation to
+        work
+      Improving K-12 education: Better K-12 education
+      Providing better access to higher education: Access to higher education
+  '2023':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Providing more affordable housing options: '#FE6100'
+      Creating more training or retraining opportunities: '#648FFF'
+      Providing better transportation options to and from work: '#AE1EC7'
+      Improving K-12 education: '#FFB000'
+      Providing better access to higher education: '#AF1737'
+    response_aliases:
+      Providing more affordable housing options: Affordable housing
+      Creating more training or retraining opportunities: Training or retraining
+      Providing better transportation options to and from work: Transportation to
+        work
+      Improving K-12 education: Better K-12 education
+      Providing better access to higher education: Access to higher education
+  '2021':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Providing more affordable housing options: '#FE6100'
+      Creating more training or retraining opportunities: '#648FFF'
+      Providing better transportation options to and from work: '#AE1EC7'
+      Improving K-12 education: '#FFB000'
+      Providing better access to higher education: '#AF1737'
+    response_aliases:
+      Providing more affordable housing options: Affordable housing
+      Creating more training or retraining opportunities: Training or retraining
+      Providing better transportation options to and from work: Transportation to
+        work
+      Improving K-12 education: Better K-12 education
+      Providing better access to higher education: Access to higher education
+  '2019':
+    exclude_responses:
+    - DK
+    custom_colors:
+      Providing more affordable housing options: '#FE6100'
+      Creating more training or retraining opportunities: '#648FFF'
+      Providing better transportation options to and from work: '#AE1EC7'
+      Improving K-12 education: '#FFB000'
+      Providing better access to higher education: '#AF1737'
+    response_aliases:
+      Providing more affordable housing options: Affordable housing
+      Creating more training or retraining opportunities: Training or retraining
+      Providing better transportation options to and from work: Transportation to
+        work
+      Improving K-12 education: Better K-12 education
+      Providing better access to higher education: Access to higher education

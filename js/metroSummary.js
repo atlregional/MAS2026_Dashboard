@@ -31,25 +31,25 @@
     }
 
     function renderQuestionPicker() {
-        const displayOptions = MASData.getQuestions().map((q) => q.display);
+        const questions = MASData.getQuestions();
         const container = document.getElementById("question-picker-container");
         if (state.isMobile) {
-            MASMobileViews.renderQuestionPicker(container, displayOptions, state.question, onQuestionChange);
-        } else {
-            container.innerHTML = `
-                <label class="field-label" for="metro-question-select">Choose a question from the MAS 2025 Survey</label>
-                <select id="metro-question-select" class="question-select"></select>
-                <div class="field-help">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</div>`;
-            const select = document.getElementById("metro-question-select");
-            displayOptions.forEach((opt) => {
-                const el = document.createElement("option");
-                el.value = opt;
-                el.textContent = opt;
-                if (opt === state.question) el.selected = true;
-                select.appendChild(el);
-            });
-            select.addEventListener("change", () => onQuestionChange(select.value));
+            MASMobileViews.renderQuestionPicker(container, questions, state.question, onQuestionChange);
+            return;
         }
+        // The label + picker wrapper is built once and left alone on
+        // later calls -- MASQuestionPicker.render() re-renders just the
+        // picker element itself, so its own listeners (bound once, see
+        // questionPicker.js) don't get re-attached on every question
+        // change.
+        let pickerEl = document.getElementById("metro-question-picker");
+        if (!pickerEl) {
+            container.innerHTML = `
+                <label class="field-label" for="metro-question-btn">Choose a question from the MAS 2025 Survey<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</span></span></label>
+                <div id="metro-question-picker" class="qpicker"></div>`;
+            pickerEl = document.getElementById("metro-question-picker");
+        }
+        MASQuestionPicker.render(pickerEl, questions, state.question, onQuestionChange, "metro-question-btn");
     }
 
     function onQuestionChange(newDisplay) {
@@ -71,17 +71,12 @@
         const group = document.getElementById("year-radio-group");
         group.innerHTML = "";
         yearOptions.forEach((year) => {
-            const label = document.createElement("label");
-            label.className = year === state.year ? "selected" : "";
-            const input = document.createElement("input");
-            input.type = "radio";
-            input.name = "metro-year";
-            input.value = year;
-            input.checked = year === state.year;
-            input.addEventListener("change", () => onYearChange(year));
-            label.appendChild(input);
-            label.appendChild(document.createTextNode(year));
-            group.appendChild(label);
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = year;
+            if (year === state.year) btn.className = "selected";
+            btn.addEventListener("click", () => onYearChange(year));
+            group.appendChild(btn);
         });
     }
 
@@ -126,18 +121,18 @@
         const q = currentQuestionRecord();
         const container = document.getElementById("trend-container");
         if (!q.has_trend) {
-            container.innerHTML = `<div class="info-box">📊 There is no recent and viable year-over-year trend data for this question.</div>`;
+            container.innerHTML = `<div class="info-box">There is no recent and viable year-over-year trend data for this question.</div>`;
             return;
         }
         const trend = MASData.getMetroTrend(q.key);
         if (!trend) {
-            container.innerHTML = `<div class="info-box">📊 There is no recent and viable year-over-year trend data for this question.</div>`;
+            container.innerHTML = `<div class="info-box">There is no recent and viable year-over-year trend data for this question.</div>`;
             return;
         }
         container.innerHTML = `
             <div id="trend-chart" class="chart-container"></div>
             <div class="section-caption">Note: Remaining percentages are either Don't Know or Not Available.</div>
-            <div class="info-box">📊 This chart shows trends across ALL survey years, regardless of the year filter above.</div>`;
+            <div class="section-caption">Note: This chart shows trends across ALL survey years, regardless of the year filter above.</div>`;
         MASCharts.buildTrendLineChart(
             "trend-chart",
             trend.sort_order,
@@ -157,14 +152,6 @@
             const q = currentQuestionRecord();
             state.year = SharedState.getSharedYear(yearOptionsFor(q));
             state.isMobile = SharedState.getIsMobile();
-
-            const toggle = document.getElementById("mobile-toggle");
-            MASMain.initMobileToggle(toggle, (isMobile) => {
-                state.isMobile = isMobile;
-                renderQuestionPicker();
-                renderResponseDistribution();
-                renderTrendSection();
-            });
 
             renderQuestionPicker();
             renderYearControls();

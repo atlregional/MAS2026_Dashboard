@@ -1,0 +1,40 @@
+question_map:
+  BIGPROBLEM| What is the biggest problem in metro Atlanta today?: bigprob
+  TRANSPORTATION| What is the best long-term solution to traffic problems in metro Atlanta?: fixtraf
+  WORKFORCE| Is now a good or bad time to find a well-paying job?: findjob
+  QUALITY OF LIFE| Would you move within, move out of, or stay in metro Atlanta?: move
+  TRANSPORTATION| I lack the transportation I need to get to places I need to go: transport
+  QUALITY OF LIFE| In 3 years, will living in metro Atlanta be better, worse, or same?: lkahead
+  WORKFORCE| What option would most likely attract and retain a skilled workforce for metro Atlanta?: workfrce
+  ECONOMY| How would you come up with $400 for an emergency?: emerg
+  AI| Impact of AI on job availability: aijob
+  AI| Impact of AI on business productivity: aiproductiv
+  AI| Impact of AI on making life easier or harder.: aieasier
+  AI| Impact of AI on energy consumption: aienergy
+  HOUSING| I could not afford to move to another residence in my current neighborhood right now: nomovnhood
+  TRANSPORTATION| Future growth in the metro area should be focused...: growth
+  ENVIRONMENT| How serious of a global threat will climate change be in the next 10 years?: climtgblthrt
+  ENVIRONMENT| How serious a threat to metro Atlanta will climate change be in the next 10 years?: climtatlthrt
+  HOUSING| Low-wage workers of local businesses have no problem finding affordable housing in my community.: houswage
+  HOUSING| What is the main reason for the affordable housing problems in metro Atlanta that people face?: housreason
+  ECONOMY| Comparing to a year ago, would you say that your financial situation is...: finances
+question_hist:
+  bigprob: 0
+  fixtraf: 1
+  findjob: 1
+  move: 1
+  transport: 1
+  lkahead: 1
+  workfrce: 1
+  emerg: 1
+  aijob: 0
+  aiproductiv: 0
+  aieasier: 0
+  aienergy: 0
+  nomovnhood: 1
+  growth: 1
+  climtgblthrt: 1
+  climtatlthrt: 1
+  houswage: 1
+  housreason: 0
+  finances: 1

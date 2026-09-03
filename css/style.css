@@ -19,6 +19,8 @@
     --border-gray: #808080;
     --grid-color: #e5e5e5;
     --header-bg: #f9f9f9;
+    --card-bg: #f9f6f0;          /* off-white chart-card background */
+    --card-border: #efe9db;
 }
 
 * {
@@ -49,10 +51,14 @@ a {
     max-width: 68rem;
 }
 
-/* --- Header --- */
+/* --- Header: logo and nav share one bar, like a typical webpage header.
+   The page's own heading (e.g. "Metro Summary Dashboard") lives in the
+   content area below as .page-title, not in this bar. --- */
 .site-header {
+    position: relative;
     background-color: var(--header-bg);
-    padding: 20px 0;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 14px 0;
     margin-bottom: 1.5rem;
 }
 
@@ -62,35 +68,53 @@ a {
     padding: 0 1.5rem;
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+    flex-wrap: wrap;
+}
+
+.site-header__logo {
+    display: inline-flex;
 }
 
 .site-header__logo img {
-    height: 100px;
+    height: 56px;
     width: auto;
     display: block;
 }
 
-.site-header__title {
-    color: var(--heading-blue);
-    font-size: 40px;
-    font-weight: 600;
-    margin: 0;
+/* --- Nav (sits inline with the logo inside .site-header__inner on
+   desktop; becomes a hamburger-triggered dropdown on mobile -- see the
+   max-width:768px block below). The checkbox/label pair is a pure-CSS
+   toggle (no JS): the checkbox is invisible, the label is the visible
+   hamburger button, and `:checked ~ .site-nav` reveals the panel. This
+   keeps the menu working even on faq.html, which loads no JS at all. --- */
+.nav-toggle-checkbox {
+    display: none;
 }
 
-/* --- Nav --- */
+.nav-toggle-btn {
+    display: none;
+}
+
 .site-nav {
     display: flex;
     gap: 1.5rem;
-    padding: 0.75rem 0 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
-    margin-bottom: 1.5rem;
     flex-wrap: wrap;
+}
+
+/* --- Page title (moved out of the header bar; renders below it, at the
+   top of each page's own content area) --- */
+.page-title {
+    color: var(--heading-blue);
+    font-size: 34px;
+    font-weight: 600;
+    margin: 0 0 1.25rem;
 }
 
 .site-nav a {
     text-decoration: none;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     color: var(--title-font-color);
     padding-bottom: 4px;
@@ -106,25 +130,33 @@ a {
     border-bottom-color: var(--heading-blue);
 }
 
-/* --- Intro blurb (Metro Summary only) --- */
+/* --- Intro blurb (splash page only): headline / subline / fineprint each
+   get their own line instead of running together as one paragraph, so
+   the hierarchy (hook -> key stat -> supporting detail) actually reads
+   as one. --- */
 .intro-blurb {
     line-height: 1.5;
     margin-bottom: 1.25rem;
 }
 
 .intro-blurb .headline {
+    display: block;
     color: #F15B29;
     font-size: 22px;
     font-weight: bold;
 }
 
 .intro-blurb .subline {
+    display: block;
+    margin-top: 0.5rem;
     color: #29ABE2;
     font-size: 20px;
     font-weight: 600;
 }
 
 .intro-blurb .fineprint {
+    display: block;
+    margin-top: 1rem;
     color: var(--title-font-color);
     font-size: 15px;
     font-weight: 400;
@@ -145,7 +177,7 @@ a {
 }
 
 .section-caption {
-    color: var(--title-font-color);
+    color: #8a8a8a;
     font-size: 14px;
     margin-top: 0.5rem;
 }
@@ -183,16 +215,20 @@ a {
 }
 
 .controls-row__years {
-    flex: 3 1 320px;
+    flex: 1 1 320px;
 }
 
+/* Sized to its own content (not stretched) so the year pills get all the
+   leftover row width instead of splitting it evenly -- pushes this
+   column to sit further right, with just enough room for the pill toggle
+   itself, which lets a full year range (e.g. 2016-2025) fit on one line. */
 .controls-row__mode {
-    flex: 1 1 160px;
+    flex: 0 0 auto;
 }
 
 .field-label {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--label-color);
     margin-bottom: 6px;
     display: block;
@@ -202,49 +238,209 @@ a {
     margin-bottom: 1rem;
 }
 
-select.question-select {
+/* --- Custom desktop question picker (questionPicker.js) -- replaces a
+   native <select> so the category badge, question text, and trend label
+   can each be individually colored/styled, which no browser allows
+   inside a native <option>. The closed button and every option row share
+   one 3-column grid, so all three pieces start at the same x position
+   everywhere, closed state included. --- */
+.qpicker {
+    position: relative;
+}
+
+.qpicker__button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
     width: 100%;
     font-family: var(--font-family);
-    font-size: 15px;
     padding: 8px 10px;
     border: 2px solid var(--border-gray);
     border-radius: 5px;
     background: white;
     color: var(--text-color);
+    cursor: pointer;
+    text-align: left;
 }
 
-.field-help {
+.qpicker__button-row,
+.qpicker__option {
+    display: grid;
+    grid-template-columns: 150px 1fr 118px;
+    align-items: center;
+    column-gap: 10px;
+    width: 100%;
+}
+
+.qpicker__chevron {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--title-font-color);
+}
+
+.qpicker__panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 420px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #cfcfcf;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 500;
+    padding: 4px;
+}
+
+.qpicker__option {
+    font-family: var(--font-family);
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    background: none;
+    color: var(--text-color);
+    cursor: pointer;
+    text-align: left;
+}
+
+.qpicker__option:hover,
+.qpicker__option:focus {
+    background: #eaf3fb;
+    outline: none;
+}
+
+.qpicker__option.selected {
+    background: #eaf3fb;
+}
+
+.qpicker-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    max-width: 100%;
     font-size: 12px;
-    color: #808080;
-    margin-top: 4px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Year radio, rendered as a horizontal pill group (matches st.radio(horizontal=True)) */
+.qpicker-question {
+    font-size: 14px;
+    color: var(--text-color);
+    line-height: 1.35;
+}
+
+.qpicker-trend {
+    font-size: 12px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.qpicker-trend--available {
+    color: #15803d;
+    font-weight: 600;
+}
+
+.qpicker-trend--none {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+/* --- Inline help tooltip: a small "?" icon next to a field label whose
+   hover/focus popup carries the text Streamlit used to show via each
+   widget's `help=` parameter (a native little (?) affordance next to the
+   label, no static caption taking up permanent page space). --- */
+.help-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    margin-left: 6px;
+    border-radius: 50%;
+    background: #b0b0b0;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: help;
+    vertical-align: middle;
+}
+
+.help-icon:hover,
+.help-icon:focus {
+    background: var(--heading-blue);
+    outline: none;
+}
+
+.help-icon__tooltip {
+    display: none;
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 260px;
+    background: #333333;
+    color: white;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.45;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    z-index: 500;
+    pointer-events: none;
+}
+
+.help-icon__tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333333;
+}
+
+.help-icon:hover .help-icon__tooltip,
+.help-icon:focus .help-icon__tooltip {
+    display: block;
+}
+
+/* Year selector -- plain colored buttons, same look as .demo-segmented's
+   demographic buttons (solid blue when selected) rather than radio
+   inputs inside pill-shaped labels. */
 .year-radio-group {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
 }
 
-.year-radio-group label {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+.year-radio-group button {
+    font-family: var(--font-family);
     font-size: 14px;
     padding: 4px 10px;
     border: 1px solid #cfcfcf;
     border-radius: 16px;
+    background: white;
+    color: var(--text-color);
     cursor: pointer;
-    user-select: none;
 }
 
-.year-radio-group input[type="radio"] {
-    accent-color: var(--heading-blue);
-}
-
-.year-radio-group label.selected {
+.year-radio-group button.selected {
+    background: var(--heading-blue);
     border-color: var(--heading-blue);
-    background: #eaf3fb;
+    color: white;
 }
 
 /* Topline/Detailed pill selector (mirrors st.pills) */
@@ -268,6 +464,97 @@ select.question-select {
 .mode-pills button.selected {
     background: var(--heading-blue);
     color: white;
+}
+
+/* --- Crosstab card header row: the "Response by X Demographic (Year)"
+   heading plus the stacked/small-multiples view toggle, side by side. --- */
+.crosstab-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+}
+
+.crosstab-card__header .section-heading {
+    margin: 0;
+}
+
+/* A true sliding-switch look: one rounded track holding both labels, with
+   a persistent thumb element that slides between them (positioned by JS in
+   demographicBreakdown.js -- its left/width are set to match whichever
+   button is currently selected, and this transition is what makes it slide
+   rather than snap). The whole track has a single click handler (see
+   switchChartView() in demographicBreakdown.js) so clicking anywhere in it
+   -- not just precisely on the unselected label -- toggles the view, same
+   as a real switch. */
+.chart-view-toggle {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 2px;
+    padding: 3px;
+    background: var(--border-gray);
+    border-radius: 18px;
+    cursor: pointer;
+}
+
+.chart-view-toggle__thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: 0;
+    background: white;
+    border-radius: 15px;
+    transition: left 0.25s ease, width 0.25s ease;
+}
+
+.chart-view-toggle button {
+    position: relative;
+    z-index: 1;
+    font-family: var(--font-family);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 15px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.chart-view-toggle button.selected {
+    color: var(--border-gray);
+}
+
+/* Crossfade + gentle scale applied to the crosstab chart when switching
+   between stacked and small-multiples (see switchChartView()). Plotly's
+   two layouts are structurally too different (one shared axis vs. N
+   independent subplot axes) to literally morph bar-by-bar, so this fakes
+   the "expanding apart" / "combining back together" feel with a fade-out
+   -> swap -> fade-in instead of an instant cut. */
+#crosstab-container {
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+#crosstab-container.chart-transition-exit {
+    opacity: 0;
+    transform: scale(0.97);
+}
+
+#crosstab-container.chart-transition-enter {
+    opacity: 0;
+    transform: scale(1.03);
+}
+
+/* Small multiples can be wider than the card (one panel per response
+   category) -- scrolls horizontally within the card instead of squeezing
+   every panel down to illegibility. */
+.small-multiples-scroll {
+    overflow-x: auto;
+    padding-bottom: 6px;
 }
 
 /* Demographic segmented control (mirrors st.segmented_control) */
@@ -298,6 +585,25 @@ select.question-select {
 /* --- Chart container --- */
 .chart-container {
     width: 100%;
+}
+
+/* --- Chart card: the off-white panel behind a section's heading, its
+   chart (Plotly charts render with a transparent background so this
+   shows through -- see charts.js), and its "Note:" caption together, so
+   they read as one unit instead of the chart alone having a backdrop.
+   :empty covers containers (like #historical-container) that are
+   sometimes cleared to nothing -- an empty card would otherwise show as
+   a floating blank box. --- */
+.chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.chart-card:empty {
+    display: none;
 }
 
 /* --- Mobile: label-above-bar rows (ported from mobile_views._bar_row_html) --- */
@@ -358,7 +664,8 @@ select.question-select {
 
 .demo-card-subtitle {
     color: var(--title-font-color);
-    font-size: 15px;
+    font-style: italic;
+    font-size: 16px;
     margin-top: 4px;
     margin-bottom: 14px;
 }
@@ -408,13 +715,38 @@ select.question-select {
 .mobile-qpicker__summary {
     padding: 10px 12px;
     cursor: pointer;
-    font-weight: 600;
     font-size: 14px;
     list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* The current selection's stacked rows need to fill the row (not
+   shrink-wrap to their own content) so the chevron sits at the true
+   right edge and long question text wraps instead of getting squeezed. */
+.mobile-qpicker__summary .mobile-qpicker__option-rows {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .mobile-qpicker__summary::-webkit-details-marker {
     display: none;
+}
+
+/* Down-arrow affordance so this reads as a dropdown -- flips to point up
+   once expanded (details[open], native to <details>/<summary>). */
+.mobile-qpicker__summary::after {
+    content: "\25BC";
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--title-font-color);
+    transition: transform 0.2s ease;
+}
+
+.mobile-qpicker[open] > .mobile-qpicker__summary::after {
+    transform: rotate(180deg);
 }
 
 .mobile-qpicker__body {
@@ -432,7 +764,7 @@ select.question-select {
     text-align: left;
     font-family: var(--font-family);
     font-size: 14px;
-    padding: 8px 10px;
+    padding: 10px;
     margin-bottom: 4px;
     border: 1px solid #e0e0e0;
     border-radius: 5px;
@@ -448,13 +780,46 @@ select.question-select {
     cursor: default;
 }
 
-/* --- Mobile display-mode toggle --- */
-.mobile-toggle-row {
+/* Category badge / question / trend label stacked one per line -- a
+   phone screen isn't wide enough for the desktop dropdown's fixed
+   3-column layout (questionPicker.js), so each piece gets its own row
+   instead. A flex column blockifies its children regardless of their own
+   display type, so the shared .qpicker-category/-question/-trend spans
+   (built for that grid) stack correctly here with no changes to them. */
+.mobile-qpicker__option-rows {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 1rem;
-    font-size: 14px;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mobile-qpicker__option-rows .qpicker-trend {
+    text-align: left;
+}
+
+/* --- Splash page (index.html): just the intro blurb plus a CTA into the
+   dashboard. The mobile "best viewed on desktop" note used to be a
+   dismissible popup shown on the dashboard pages; it now lives inline at
+   the end of this blurb instead (see splash.js), so there's no popup
+   markup/CSS anymore. --- */
+.splash-shell {
+    padding-top: 2rem;
+}
+
+.splash-cta {
+    display: inline-block;
+    margin-top: 1.5rem;
+    font-family: var(--font-family);
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 6px;
+    background: var(--heading-blue);
+    color: white;
+    text-decoration: none;
+}
+
+.splash-cta:hover {
+    background: #1c5488;
 }
 
 /* --- Footer --- */
@@ -511,15 +876,19 @@ select.question-select {
     margin-bottom: 0.5rem;
 }
 
-/* --- Scroll indicator (purely decorative in the server app too -- the CSS
-   rule shipped on every page, but no click handler was ever wired to it
-   there either; ported as-is rather than "fixing" pre-existing dead code) --- */
+/* --- Scroll indicator: was purely decorative in the server app (a CSS
+   rule shipped on every page with no click handler ever wired to it
+   there); this build makes it a real button -- click scrolls the page
+   down about one screen, then it fades out and removes itself (see
+   js/scrollIndicator.js, loaded on every page). --- */
 .scroll-indicator {
     position: fixed;
     bottom: 30px;
     right: 30px;
     width: 50px;
     height: 50px;
+    border: none;
+    padding: 0;
     background-color: #2364a0;
     border-radius: 50%;
     display: flex;
@@ -528,6 +897,18 @@ select.question-select {
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     opacity: 0.8;
+    cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.scroll-indicator:hover {
+    opacity: 1;
+}
+
+.scroll-indicator.is-hiding {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
 }
 
 .scroll-indicator::before {
@@ -550,10 +931,29 @@ select.question-select {
     font-weight: 600;
     font-size: 15px;
     list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .faq-item__summary::-webkit-details-marker {
     display: none;
+}
+
+/* Down-arrow affordance -- same pattern as .mobile-qpicker__summary --
+   so it's clear each question is expandable, and flips to point up once
+   a question is open (details[open], native to <details>/<summary>). */
+.faq-item__summary::after {
+    content: "\25BC";
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--title-font-color);
+    transition: transform 0.2s ease;
+}
+
+.faq-item[open] > .faq-item__summary::after {
+    transform: rotate(180deg);
 }
 
 .faq-item__body {
@@ -572,9 +972,9 @@ select.question-select {
 
 @media (max-width: 768px) {
     .site-header__logo img {
-        height: 60px;
+        height: 42px;
     }
-    .site-header__title {
+    .page-title {
         font-size: 26px;
     }
     .page-shell, .page-shell--wide {
@@ -582,5 +982,70 @@ select.question-select {
     }
     .site-footer__logos {
         flex-direction: column;
+    }
+
+    /* Hamburger button replaces the horizontal nav row, which was
+       wrapping to two lines on narrow phone screens. */
+    .nav-toggle-btn {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 5px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: none;
+        background: none;
+        cursor: pointer;
+    }
+
+    .nav-toggle-btn span {
+        display: block;
+        height: 2px;
+        background: var(--label-color);
+        border-radius: 2px;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    /* Collapsed by default; opens as a dropdown panel below the header
+       bar (not pushing content down) when the checkbox is checked. */
+    .site-nav {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        gap: 0;
+        background: var(--header-bg);
+        border-top: 1px solid #e0e0e0;
+        border-bottom: 1px solid #e0e0e0;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        padding: 0.25rem 1rem;
+    }
+
+    .nav-toggle-checkbox:checked ~ .site-nav {
+        display: flex;
+    }
+
+    .site-nav a {
+        font-size: 16px;
+        padding: 0.9rem 0;
+        border-bottom: 1px solid #ececec;
+    }
+
+    .site-nav a:last-child {
+        border-bottom: none;
+    }
+
+    /* Hamburger -> X when the panel is open. */
+    .nav-toggle-checkbox:checked ~ .nav-toggle-btn span:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+    .nav-toggle-checkbox:checked ~ .nav-toggle-btn span:nth-child(2) {
+        opacity: 0;
+    }
+    .nav-toggle-checkbox:checked ~ .nav-toggle-btn span:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
     }
 }

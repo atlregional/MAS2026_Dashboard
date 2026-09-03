@@ -82,14 +82,19 @@ const MASMobileViews = (() => {
 
         container.innerHTML = "";
 
+        // "Response by X Demographic (Year)" leads, styled as the bold
+        // blue heading (matches the desktop card's .section-heading
+        // treatment); the actual survey question follows underneath in
+        // the plain grey subtitle style -- the reverse of both the order
+        // and the styling the question/subtitle originally had.
         const heading = document.createElement("div");
         heading.className = "demo-card-heading";
-        heading.textContent = questionTitle;
+        heading.textContent = subtitle;
         container.appendChild(heading);
 
         const sub = document.createElement("div");
         sub.className = "demo-card-subtitle";
-        sub.textContent = subtitle;
+        sub.textContent = questionTitle;
         container.appendChild(sub);
 
         for (const groupDisplay of orderedGroups) {
@@ -145,33 +150,66 @@ const MASMobileViews = (() => {
      * more direct implementation, since a native <button> already wraps
      * long text with no virtualization to work around.
      *
+     * Each option shows the same category badge / question / trend label
+     * pieces as the desktop custom dropdown (see questionPicker.js, whose
+     * category color map and category/question split this reuses), but
+     * stacked one per line instead of in fixed-width columns -- a phone
+     * screen isn't wide enough for the desktop's 3-column alignment.
+     *
      * @param {HTMLElement} container
-     * @param {string[]} displayOptions
-     * @param {string} current
-     * @param {(option:string)=>void} onSelect
+     * @param {Array} questions -- MASData.getQuestions() records
+     * @param {string} currentDisplay -- q.display of the selected question
+     * @param {(display:string)=>void} onSelect
      */
-    function renderQuestionPicker(container, displayOptions, current, onSelect) {
+    /** The stacked category-badge/question/trend-label rows shared by the
+     * closed <summary> (showing the current selection) and every option
+     * in the open list -- so the collapsed picker reads the same way as
+     * an expanded row, instead of falling back to the old flat
+     * "CATEGORY| question (Trend label)" string once collapsed. */
+    function stackedRowsHTML(q) {
+        const { category, question } = MASQuestionPicker.splitShort(q.short);
+        const style = MASQuestionPicker.categoryStyle(category);
+        const trendClass = q.has_trend ? "qpicker-trend--available" : "qpicker-trend--none";
+        const trendText = q.has_trend ? "Trend Available" : "No Trend";
+        return `
+            <span class="mobile-qpicker__option-rows">
+                <span class="qpicker-category" style="color:${style.color};background:${style.bg}">${style.emoji} ${escapeHtml(category)}</span>
+                <span class="qpicker-question">${escapeHtml(question)}</span>
+                <span class="qpicker-trend ${trendClass}">${trendText}</span>
+            </span>`;
+    }
+
+    function renderQuestionPicker(container, questions, currentDisplay, onSelect) {
         container.innerHTML = "";
         const details = document.createElement("details");
         details.className = "mobile-qpicker";
 
+        const current = questions.find((q) => q.display === currentDisplay) || questions[0];
         const summary = document.createElement("summary");
         summary.className = "mobile-qpicker__summary";
-        summary.textContent = `📋 ${current}`;
+        summary.innerHTML = stackedRowsHTML(current);
         details.appendChild(summary);
 
         const body = document.createElement("div");
         body.className = "mobile-qpicker__body";
         body.innerHTML = `<div class="mobile-qpicker__caption">Tap a question below to select it.</div>`;
 
-        displayOptions.forEach((option) => {
-            const isCurrent = option === current;
+        questions.forEach((q) => {
+            const isCurrent = q.display === currentDisplay;
             const btn = document.createElement("button");
             btn.className = "mobile-qpicker__option";
             btn.type = "button";
-            btn.textContent = isCurrent ? `✓ ${option}` : option;
             btn.disabled = isCurrent;
-            btn.addEventListener("click", () => onSelect(option));
+            btn.innerHTML = stackedRowsHTML(q);
+            btn.addEventListener("click", () => {
+                // Picking a question from way down in the scrolled-open
+                // list would otherwise leave the page scrolled to wherever
+                // that option was, with the charts updating out of view --
+                // jump back to the top so the newly-selected question (and
+                // its now-updated charts) is what's actually visible.
+                window.scrollTo(0, 0);
+                onSelect(q.display);
+            });
             body.appendChild(btn);
         });
 

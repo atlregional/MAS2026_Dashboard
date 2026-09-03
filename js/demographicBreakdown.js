@@ -31,6 +31,7 @@
         year: null,
         isMobile: false,
         demographic: null, // display name, e.g. "Jurisdiction"
+        chartView: "stacked", // "stacked" | "small-multiples" -- desktop only
     };
 
     function validateYear(year, yearOptions) {
@@ -61,25 +62,23 @@
     }
 
     function renderQuestionPicker() {
-        const displayOptions = MASData.getQuestions().map((q) => q.display);
+        const questions = MASData.getQuestions();
         const container = document.getElementById("question-picker-container");
         if (state.isMobile) {
-            MASMobileViews.renderQuestionPicker(container, displayOptions, state.question, onQuestionChange);
-        } else {
-            container.innerHTML = `
-                <label class="field-label" for="demo-question-select">Choose a question from the MAS 2025 Survey</label>
-                <select id="demo-question-select" class="question-select"></select>
-                <div class="field-help">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</div>`;
-            const select = document.getElementById("demo-question-select");
-            displayOptions.forEach((opt) => {
-                const el = document.createElement("option");
-                el.value = opt;
-                el.textContent = opt;
-                if (opt === state.question) el.selected = true;
-                select.appendChild(el);
-            });
-            select.addEventListener("change", () => onQuestionChange(select.value));
+            MASMobileViews.renderQuestionPicker(container, questions, state.question, onQuestionChange);
+            return;
         }
+        // See metroSummary.js's identical comment: the wrapper is built
+        // once so the picker element's own listeners (bound once, see
+        // questionPicker.js) aren't re-attached on every question change.
+        let pickerEl = document.getElementById("demo-question-picker");
+        if (!pickerEl) {
+            container.innerHTML = `
+                <label class="field-label" for="demo-question-btn">Choose a question from the MAS 2025 Survey<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</span></span></label>
+                <div id="demo-question-picker" class="qpicker"></div>`;
+            pickerEl = document.getElementById("demo-question-picker");
+        }
+        MASQuestionPicker.render(pickerEl, questions, state.question, onQuestionChange, "demo-question-btn");
     }
 
     function onQuestionChange(newDisplay) {
@@ -100,17 +99,12 @@
         const group = document.getElementById("year-radio-group");
         group.innerHTML = "";
         yearOptions.forEach((year) => {
-            const label = document.createElement("label");
-            label.className = year === state.year ? "selected" : "";
-            const input = document.createElement("input");
-            input.type = "radio";
-            input.name = "demo-year";
-            input.value = year;
-            input.checked = year === state.year;
-            input.addEventListener("change", () => onYearChange(year));
-            label.appendChild(input);
-            label.appendChild(document.createTextNode(year));
-            group.appendChild(label);
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = year;
+            if (year === state.year) btn.className = "selected";
+            btn.addEventListener("click", () => onYearChange(year));
+            group.appendChild(btn);
         });
     }
 
@@ -127,7 +121,7 @@
             <button type="button" data-mode="Topline">Topline</button>
             <button type="button" class="selected" data-mode="Detailed">Detailed</button>`;
         container.querySelector('[data-mode="Topline"]').addEventListener("click", () => {
-            window.location.href = "index.html";
+            window.location.href = "metro_summary.html";
         });
     }
 
@@ -152,17 +146,111 @@
         renderCrosstabSection();
     }
 
+    /** Stacked-vs-small-multiples view toggle -- desktop only (mobile
+     * already has its own card-list layout, unaffected by this). Both
+     * views are built from the exact same crosstab data, just laid out
+     * differently, and share the same click-to-drill selection callback
+     * in renderCrosstabSection() below, so switching views never disturbs
+     * a current selection. */
+    function renderChartViewToggle() {
+        const container = document.getElementById("chart-view-toggle");
+        if (state.isMobile) {
+            container.innerHTML = "";
+            return;
+        }
+        // Built once; every later call (a toggle click, or just re-rendering
+        // because the year/demographic changed) only updates .selected and
+        // repositions the thumb below, rather than recreating the buttons.
+        // The thumb has to be the *same* DOM node across renders for its
+        // left/width CSS transition to have a "from" position to slide
+        // from -- a freshly-recreated element has no prior state, so it'd
+        // just snap into place instead of sliding.
+        if (!container.querySelector(".chart-view-toggle__thumb")) {
+            container.innerHTML = `
+                <span class="chart-view-toggle__thumb"></span>
+                <button type="button" data-view="stacked">Stacked</button>
+                <button type="button" data-view="small-multiples">Small Multiples</button>`;
+            // One listener on the whole track, not on each button, so
+            // clicking anywhere in the switch -- its padding, the currently
+            // selected label, the unselected one -- toggles it, like a real
+            // switch rather than two separate hit targets. switchChartView
+            // is a stable top-level function reference, so this is safe to
+            // re-run on every render: addEventListener no-ops on a duplicate
+            // (same function, same event, same target).
+            container.addEventListener("click", switchChartView);
+        }
+        container.querySelectorAll("button").forEach((btn) => {
+            btn.classList.toggle("selected", btn.dataset.view === state.chartView);
+        });
+        positionToggleThumb(container);
+    }
+
+    function positionToggleThumb(container) {
+        const thumb = container.querySelector(".chart-view-toggle__thumb");
+        const selected = container.querySelector("button.selected");
+        if (!thumb || !selected) return;
+        thumb.style.width = `${selected.offsetWidth}px`;
+        thumb.style.left = `${selected.offsetLeft}px`;
+    }
+
+    /** Toggle-track click handler. Flips chartView and re-renders the
+     * toggle immediately (so the thumb starts sliding right on click,
+     * independent of the chart swap below), then separately fades the
+     * chart out, rebuilds it in the new view, and fades it back in --
+     * see the #crosstab-container.chart-transition-* rules in style.css. */
+    function switchChartView() {
+        state.chartView = state.chartView === "stacked" ? "small-multiples" : "stacked";
+        renderChartViewToggle();
+
+        const chartContainer = document.getElementById("crosstab-container");
+        const canAnimate = !state.isMobile && chartContainer && chartContainer.children.length > 0;
+        if (!canAnimate) {
+            renderCrosstabSection();
+            return;
+        }
+        chartContainer.classList.add("chart-transition-exit");
+        window.setTimeout(() => {
+            renderCrosstabSection();
+            const el = document.getElementById("crosstab-container");
+            if (!el) return;
+            el.classList.remove("chart-transition-exit");
+            el.classList.add("chart-transition-enter");
+            void el.offsetWidth; // force layout so the "enter" starting state actually paints before it's removed below
+            requestAnimationFrame(() => el.classList.remove("chart-transition-enter"));
+        }, 180);
+    }
+
     function renderCrosstabSection() {
         const q = currentQuestionRecord();
         const demoColumn = currentDemoColumn();
         const crosstab = MASData.getCrosstab(q.key, state.year, state.demographic);
+        const headingEl = document.getElementById("crosstab-heading");
         const tipContainer = document.getElementById("tip-container");
         const chartContainer = document.getElementById("crosstab-container");
         const captionEl = document.getElementById("crosstab-caption");
+        const historicalCard = document.getElementById("historical-card");
         const historicalContainer = document.getElementById("historical-container");
 
+        // Rebuilding the Plotly chart(s) below (innerHTML + Plotly.newPlot)
+        // can make the browser jump the page back toward the top on
+        // desktop -- reported when selecting a bar (which also reveals the
+        // historical chart below) or switching stacked/small-multiples.
+        // Pin the scroll position back to wherever the user actually was,
+        // both right after this render and on the next frame, in case the
+        // jump happens slightly later (e.g. via Plotly's own responsive
+        // resize handling). Desktop only -- mobile's own card-list view has
+        // its own deliberate scroll-to-top elsewhere (picking a new
+        // question), which this must not interfere with.
+        const scrollY = state.isMobile ? null : window.scrollY;
+        const restoreScroll = () => {
+            if (scrollY != null && window.scrollY !== scrollY) window.scrollTo(0, scrollY);
+        };
+
+        renderChartViewToggle();
+        headingEl.textContent = "";
         tipContainer.innerHTML = "";
         historicalContainer.innerHTML = "";
+        historicalCard.style.display = "none";
         captionEl.style.display = "none";
 
         if (!crosstab) {
@@ -173,12 +261,19 @@
             chartContainer.innerHTML = hasAnyData
                 ? `<div class="warning-box">${escapeHtml(state.demographic)} data not available for this question.</div>`
                 : `<div class="info-box">No data available for the selected filters.</div>`;
+            restoreScroll();
+            requestAnimationFrame(restoreScroll);
             return;
         }
 
         captionEl.style.display = "";
 
         if (state.isMobile) {
+            // Desktop-only heading stays blank here -- the mobile card list
+            // shows "Response by X Demographic (Year)" itself, styled as
+            // its own heading with the question demoted below it (see
+            // MASMobileViews.renderDemographicCardList), so showing it a
+            // second time up here would just duplicate it.
             const selectedValue = SharedState.getSelectedDemoValue(demoColumn);
             MASMobileViews.renderDemographicCardList(chartContainer, crosstab, state.demographic, {
                 selectedValue,
@@ -192,20 +287,29 @@
                 },
             });
         } else {
-            chartContainer.innerHTML = `<div id="demo-stacked-chart" class="chart-container"></div>`;
+            // "Response by X Demographic (Year)" -- styled the same
+            // .section-heading blue as the Metro Summary page's card
+            // headings (e.g. "2025 Response Distribution"), rather than
+            // living inside the Plotly chart's own title as a smaller
+            // subtitle.
+            headingEl.textContent = crosstab.subtitle;
             const selectedValue = SharedState.getSelectedDemoValue(demoColumn);
-            MASCharts.buildDemographicStackedBarChart(
-                "demo-stacked-chart",
-                crosstab,
-                state.demographic,
-                selectedValue,
-                (rawValue) => {
-                    SharedState.setSelectedDemoValue(demoColumn, rawValue);
-                    renderCrosstabSection();
-                }
-            );
+            const onSelect = (rawValue) => {
+                SharedState.setSelectedDemoValue(demoColumn, rawValue);
+                renderCrosstabSection();
+            };
+            if (state.chartView === "small-multiples") {
+                chartContainer.innerHTML = `<div class="small-multiples-scroll"><div id="demo-stacked-chart"></div></div>`;
+                MASCharts.buildDemographicSmallMultiples("demo-stacked-chart", crosstab, state.demographic, selectedValue, onSelect);
+            } else {
+                chartContainer.innerHTML = `<div id="demo-stacked-chart" class="chart-container"></div>`;
+                MASCharts.buildDemographicStackedBarChart("demo-stacked-chart", crosstab, state.demographic, selectedValue, onSelect);
+            }
             renderDesktopHistoricalSection(q, selectedValue);
         }
+
+        restoreScroll();
+        requestAnimationFrame(restoreScroll);
     }
 
     function escapeHtml(str) {
@@ -217,8 +321,13 @@
     /** Desktop's 3-way branch below the stacked bar chart: an actual
      * chart, a "click a bar" tip, or a "no historical data" message --
      * see this file's docstring / demographic_breakdown.py's own
-     * elif-chain for the exact conditions ported here. */
+     * elif-chain for the exact conditions ported here. The "Year-over-Year
+     * Trends" card (a static heading like the Metro Summary page's, wrapping
+     * #historical-container) is shown/hidden as a whole rather than relying
+     * on the container being :empty, since it now always has that heading
+     * as a child even when there's nothing else to show yet. */
     function renderDesktopHistoricalSection(q, selectedValue) {
+        const card = document.getElementById("historical-card");
         const container = document.getElementById("historical-container");
         const tipContainer = document.getElementById("tip-container");
         container.innerHTML = "";
@@ -227,6 +336,7 @@
         if (q.has_trend && selectedValue != null) {
             const hist = MASData.getHistorical(q.key, state.demographic, selectedValue);
             if (hist && Object.keys(hist.by_year).length) {
+                card.style.display = "";
                 renderHistoricalChartInto(container, q, selectedValue, false);
                 return;
             }
@@ -236,8 +346,10 @@
         }
 
         if (q.has_trend && selectedValue == null) {
-            tipContainer.innerHTML = `<div class="tip-box">💡 <strong>Tip:</strong> <em>Click on any bar in the stacked bar chart below and Scroll Down to see historical trends for that demographic group which will pop up in a lower chart</em></div>`;
+            card.style.display = "none";
+            tipContainer.innerHTML = `<div class="tip-box">💡 <strong>Tip:</strong> <em>Click on any bar in the chart above and Scroll Down to see historical trends for that demographic group which will pop up in a lower chart</em></div>`;
         } else {
+            card.style.display = "";
             container.innerHTML = `<div class="info-box">Selected question does not have historical data or has no valid time series data.</div>`;
         }
     }
@@ -249,12 +361,15 @@
             return;
         }
         const elId = `historical-chart-${Math.random().toString(36).slice(2)}`;
+        // Desktop's gray Plotly title is now just "Cobb County (Jurisdiction)"
+        // -- the "Historic Response Trends:" prefix is redundant now that
+        // the "Year-over-Year Trends" heading sits above this chart's card.
         const chartTitle = isMobileCard
             ? `Historic ${rawValue} Response`
-            : `Historic Response Trends: ${rawValue} (${toTitleCase(state.demographic)})`;
+            : `${rawValue} (${toTitleCase(state.demographic)})`;
         containerEl.innerHTML = `
             <div id="${elId}" class="chart-container"></div>
-            <div class="info-box">📊 The Historic Response Trends chart shows trends across ALL survey years, regardless of the year filter above.</div>`;
+            <div class="section-caption">Note: The Historic Response Trends chart shows trends across ALL survey years, regardless of the year filter above.</div>`;
         MASCharts.buildTrendLineChart(
             elId,
             hist.sort_order,
@@ -275,13 +390,6 @@
             state.year = SharedState.getSharedYear(yearOptionsFor(q));
             state.isMobile = SharedState.getIsMobile();
             state.demographic = SharedState.getSavedDemographic("Jurisdiction");
-
-            const toggle = document.getElementById("mobile-toggle");
-            MASMain.initMobileToggle(toggle, (isMobile) => {
-                state.isMobile = isMobile;
-                renderQuestionPicker();
-                renderCrosstabSection();
-            });
 
             renderQuestionPicker();
             renderYearControls();
