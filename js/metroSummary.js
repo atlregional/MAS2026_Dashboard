@@ -15,6 +15,10 @@
         isMobile: false,
     };
 
+    // Desktop only -- the trend chart's legend isn't interactive on mobile
+    // (buildTrendLineChart renders it via staticPlot there).
+    const LEGEND_HINT = "Tip: Click a legend entry to hide that response; double-click one to isolate it.";
+
     function validateYear(year, yearOptions) {
         return yearOptions.includes(year) ? year : yearOptions[0];
     }
@@ -97,12 +101,42 @@
         });
     }
 
+    /** Wires (or hides) a "Download CSV" button. buildExport() returns
+     * null when there's nothing valid to export right now (no data for
+     * this question/year) -- the button hides rather than downloading a
+     * stale file left over from whatever was last successfully rendered.
+     * Re-run on every render, so .onclick (a plain property, not
+     * addEventListener) always reflects the current data, not a pile of
+     * old listeners each still closing over their own render's data. */
+    function wireDownloadButton(btnId, buildExport) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const exportData = buildExport();
+        if (!exportData) {
+            btn.style.display = "none";
+            btn.onclick = null;
+            return;
+        }
+        btn.style.display = "";
+        btn.onclick = () => MASCharts.downloadCSV(exportData.filename, exportData.headers, exportData.rows);
+    }
+
     function renderResponseDistribution() {
         const heading = document.getElementById("response-dist-heading");
         heading.textContent = `${state.year} Response Distribution`;
 
         const topline = MASData.getTopline(currentQuestionRecord().key, state.year);
         const container = document.getElementById("response-dist-container");
+        wireDownloadButton("topline-download-btn", () => {
+            if (!topline) return null;
+            return {
+                filename: `${MASCharts.slugify(currentQuestionRecord().key)}_${state.year}_topline.csv`,
+                headers: ["Response", "Percent"],
+                rows: topline.sort_order
+                    .filter((r) => topline.percents[r] !== undefined)
+                    .map((r) => [r, (topline.percents[r] * 100).toFixed(0)]),
+            };
+        });
         if (!topline) {
             container.innerHTML = `<div class="loading-note">No data available for this question/year.</div>`;
             return;
@@ -120,19 +154,24 @@
     function renderTrendSection() {
         const q = currentQuestionRecord();
         const container = document.getElementById("trend-container");
-        if (!q.has_trend) {
-            container.innerHTML = `<div class="info-box">There is no recent and viable year-over-year trend data for this question.</div>`;
-            return;
-        }
-        const trend = MASData.getMetroTrend(q.key);
-        if (!trend) {
+        const trend = q.has_trend ? MASData.getMetroTrend(q.key) : null;
+        wireDownloadButton("trend-download-btn", () => {
+            if (!trend) return null;
+            const years = Object.keys(trend.by_year).sort();
+            return {
+                filename: `${MASCharts.slugify(q.key)}_trend.csv`,
+                headers: ["Year", ...trend.sort_order],
+                rows: years.map((y) => [y, ...trend.sort_order.map((r) => (trend.by_year[y][r] !== undefined ? (trend.by_year[y][r] * 100).toFixed(0) : ""))]),
+            };
+        });
+        if (!q.has_trend || !trend) {
             container.innerHTML = `<div class="info-box">There is no recent and viable year-over-year trend data for this question.</div>`;
             return;
         }
         container.innerHTML = `
             <div id="trend-chart" class="chart-container"></div>
             <div class="section-caption">Note: Remaining percentages are either Don't Know or Not Available.</div>
-            <div class="section-caption">Note: This chart shows trends across ALL survey years, regardless of the year filter above.</div>`;
+            <div class="section-caption">Note: This chart shows trends across ALL survey years, regardless of the year filter above.${state.isMobile ? "" : `<br>${LEGEND_HINT}`}</div>`;
         MASCharts.buildTrendLineChart(
             "trend-chart",
             trend.sort_order,

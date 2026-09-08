@@ -46,6 +46,63 @@ const MASCharts = (() => {
         return base + Math.max(0, nLines - 1) * lineHeight;
     }
 
+    /** Positions a small custom tooltip at the mouse cursor, instead of
+     * Plotly's own default hover label -- which always anchors to the data
+     * point itself (e.g. the end of a bar), not the cursor, and has no
+     * built-in option to do otherwise. The caller must suppress Plotly's
+     * native hover box on its traces (hoverinfo: "none") so the two don't
+     * show up stacked on top of each other, and pass renderContent(point)
+     * to build the tooltip's HTML from whichever point is hovered.
+     * plotly_hover only fires once per point-enter (not per pixel of
+     * motion), so this also tracks raw mousemove while a point is active to
+     * keep the tooltip actually following the cursor around within it. */
+    function attachCursorTooltip(gd, renderContent) {
+        const container = gd.parentElement;
+        if (!container) return;
+        // Anchors the tooltip's absolute positioning to this container --
+        // set programmatically rather than relying on each page's CSS to
+        // remember it, so this works for any chart's container without
+        // extra bookkeeping.
+        if (getComputedStyle(container).position === "static") {
+            container.style.position = "relative";
+        }
+        let tooltipEl = container.querySelector(".cursor-tooltip");
+        if (!tooltipEl) {
+            tooltipEl = document.createElement("div");
+            tooltipEl.className = "cursor-tooltip";
+            container.appendChild(tooltipEl);
+        }
+        let active = false;
+
+        const position = (clientX, clientY) => {
+            const rect = container.getBoundingClientRect();
+            tooltipEl.style.left = `${clientX - rect.left + 8}px`;
+            tooltipEl.style.top = `${clientY - rect.top + 8}px`;
+        };
+
+        gd.removeAllListeners && gd.removeAllListeners("plotly_hover");
+        gd.removeAllListeners && gd.removeAllListeners("plotly_unhover");
+        gd.on("plotly_hover", (evt) => {
+            if (!evt || !evt.points || !evt.points.length) return;
+            const content = renderContent(evt.points[0]);
+            if (!content) return;
+            tooltipEl.innerHTML = content;
+            tooltipEl.style.display = "block";
+            active = true;
+            if (evt.event) position(evt.event.clientX, evt.event.clientY);
+        });
+        gd.on("plotly_unhover", () => {
+            active = false;
+            tooltipEl.style.display = "none";
+        });
+        // A plain property assignment (not addEventListener) so re-calling
+        // this on a re-render replaces the old handler instead of piling up
+        // a new one each time -- same reasoning as the gd.on() pattern above.
+        gd.onmousemove = (e) => {
+            if (active) position(e.clientX, e.clientY);
+        };
+    }
+
     /** Greedy word-wrap by character width -- JS equivalent of
      * textwrap.wrap(text, width=N)'s default behavior for ordinary
      * English sentences (no single word here ever approaches `width`
@@ -97,7 +154,9 @@ const MASCharts = (() => {
                 text: [percents[response]],
                 texttemplate: "%{text:.0%}",
                 textposition: "outside",
-                hovertemplate: "Response: %{fullData.name}<br>Percent: %{text:.0%}<extra></extra>",
+                // Native hover box suppressed in favor of the cursor-
+                // following custom tooltip attached below.
+                hoverinfo: "none",
                 showlegend: false,
             }));
 
@@ -132,7 +191,9 @@ const MASCharts = (() => {
             },
         };
 
-        Plotly.newPlot(elementId, traces, layout, { responsive: true, displaylogo: false });
+        const gd = document.getElementById(elementId);
+        Plotly.newPlot(gd, traces, layout, { responsive: true, displaylogo: false });
+        attachCursorTooltip(gd, (point) => `Response: ${point.data.name}<br>Percent: ${Math.round(point.x * 100)}%`);
     }
 
     /**
@@ -254,7 +315,11 @@ const MASCharts = (() => {
                     name: response,
                     marker: { color: colors[response] || FALLBACK_BAR_COLOR, opacity },
                     customdata,
-                    hovertemplate: `${demographicLabel}: %{y}<br>Response: %{fullData.name}<br>Percent: %{x:.0%}<extra></extra>`,
+                    // Plotly's native hover box is suppressed here in favor
+                    // of attachCursorTooltip below, which shows the same
+                    // info but follows the cursor instead of anchoring to
+                    // the bar's end.
+                    hoverinfo: "none",
                 };
             });
 
@@ -320,6 +385,9 @@ const MASCharts = (() => {
             } catch (e) {
                 console.warn("malformed plotly click payload, ignoring:", e);
             }
+        });
+        attachCursorTooltip(gd, (point) => {
+            return `${demographicLabel}: ${point.y}<br>Response: ${point.data.name}<br>Percent: ${Math.round(point.x * 100)}%`;
         });
     }
 
@@ -435,7 +503,9 @@ const MASCharts = (() => {
                 xaxis: `x${axisNum}`,
                 yaxis: `y${axisNum}`,
                 showlegend: false,
-                hovertemplate: `${demographicLabel}: %{y}<br>Response: %{fullData.name}<br>Percent: %{x:.0%}<extra></extra>`,
+                // Native hover box suppressed in favor of the cursor-
+                // following custom tooltip attached below.
+                hoverinfo: "none",
             };
         });
 
@@ -455,7 +525,11 @@ const MASCharts = (() => {
         // font size, confirmed against two real labels ("Quality of Local
         // Schools" and "Developers building too expensive units").
         const HEADER_GUTTER = 16; // px of breathing room within each panel's own width
-        const headerCharsPerLine = Math.max(8, Math.floor((PANEL_WIDTH - HEADER_GUTTER) / 5.2));
+        // -2 chars reserves room for the " ⇅"/" ▼" sort-cue suffix
+        // buildHeaderAnnotations appends below, so it never pushes a
+        // borderline-length header past its panel's width on the wrapped
+        // last line.
+        const headerCharsPerLine = Math.max(8, Math.floor((PANEL_WIDTH - HEADER_GUTTER) / 5.2) - 2);
         const wrappedHeaders = panelResponses.map((response) => wrapText(response, headerCharsPerLine));
         const maxHeaderLines = Math.max(1, ...wrappedHeaders.map((lines) => lines.length));
 
@@ -478,6 +552,55 @@ const MASCharts = (() => {
         const headerBlockHeight = maxHeaderLines * HEADER_LINE_HEIGHT;
         const marginTop = TOP_PAD + titleBlockHeight + TITLE_HEADER_GAP + headerBlockHeight + PLOT_GAP;
 
+        // Clicking a column header sorts every panel's rows by that
+        // response's percentage, most to least -- clicking the same header
+        // again reverts to the default order. All panels share one row
+        // order (only panel 0 shows labels, so every panel MUST stay in
+        // the same order or the unlabeled panels' rows would no longer line
+        // up with panel 0's), so sorting by one response reorders all of
+        // them at once via their y-axes' categoryarray, not just the
+        // clicked panel's own.
+        let activeSortResponse = null;
+
+        function sortedGroupOrder(sortResponse) {
+            if (!sortResponse) return orderedGroups;
+            const withValue = [];
+            const withoutValue = [];
+            for (const groupDisplay of orderedGroups) {
+                const group = groups.find((g) => g.group_display === groupDisplay);
+                if (group && group.percents[sortResponse] !== undefined) {
+                    withValue.push({ groupDisplay, value: group.percents[sortResponse] });
+                } else {
+                    withoutValue.push(groupDisplay);
+                }
+            }
+            withValue.sort((a, b) => b.value - a.value);
+            return [...withValue.map((g) => g.groupDisplay), ...withoutValue];
+        }
+
+        // captureevents makes each header clickable (fires plotly_clickannotation
+        // below) and gets Plotly's own pointer-cursor hint on hover for free.
+        // Every header carries a small "⇅" so the sort feature is
+        // discoverable at a glance -- clicking a bare header with no visual
+        // cue isn't something a user would think to try. The active column
+        // swaps its "⇅" for a "▼" to show which sort is currently applied.
+        function buildHeaderAnnotations(sortResponse) {
+            return panelResponses.map((response, i) => ({
+                text: wrappedHeaders[i].join("<br>") + (response === sortResponse ? " ▼" : " ⇅"),
+                xref: `x${i + 1} domain`,
+                yref: "paper",
+                x: 0.5,
+                y: 1,
+                align: "center",
+                xanchor: "center",
+                yanchor: "bottom",
+                yshift: PLOT_GAP,
+                showarrow: false,
+                captureevents: true,
+                font: { size: 12, color: TITLE_FONT_COLOR },
+            }));
+        }
+
         const layout = {
             grid: { rows: 1, columns: nPanels, pattern: "independent" },
             width,
@@ -497,19 +620,7 @@ const MASCharts = (() => {
                 yanchor: "top",
                 pad: { t: TOP_PAD },
             },
-            annotations: panelResponses.map((response, i) => ({
-                text: wrappedHeaders[i].join("<br>"),
-                xref: `x${i + 1} domain`,
-                yref: "paper",
-                x: 0.5,
-                y: 1,
-                align: "center",
-                xanchor: "center",
-                yanchor: "bottom",
-                yshift: PLOT_GAP,
-                showarrow: false,
-                font: { size: 12, color: TITLE_FONT_COLOR },
-            })),
+            annotations: buildHeaderAnnotations(activeSortResponse),
         };
 
         panelResponses.forEach((response, i) => {
@@ -548,11 +659,68 @@ const MASCharts = (() => {
                 console.warn("malformed plotly click payload, ignoring:", e);
             }
         });
+        gd.removeAllListeners && gd.removeAllListeners("plotly_clickannotation");
+        gd.on("plotly_clickannotation", (evt) => {
+            if (!evt || evt.index == null) return;
+            const response = panelResponses[evt.index];
+            if (!response) return;
+            activeSortResponse = activeSortResponse === response ? null : response;
+            const newOrder = sortedGroupOrder(activeSortResponse);
+            const axisUpdate = {};
+            panelResponses.forEach((_, i) => {
+                // Plotly.relayout quirk (confirmed live): the first axis has
+                // to be addressed as "yaxis", not "yaxis1" -- "yaxis1" is
+                // accepted fine as a layout *key* at newPlot time, but as a
+                // relayout *path* it silently no-ops instead of updating
+                // anything. Every later axis does take its numbered form.
+                const axisKey = i === 0 ? "yaxis" : `yaxis${i + 1}`;
+                axisUpdate[`${axisKey}.categoryarray`] = newOrder;
+            });
+            Plotly.relayout(gd, { ...axisUpdate, annotations: buildHeaderAnnotations(activeSortResponse) });
+        });
+        attachCursorTooltip(gd, (point) => {
+            return `${demographicLabel}: ${point.y}<br>Response: ${point.data.name}<br>Percent: ${Math.round(point.x * 100)}%`;
+        });
+    }
+
+    /** Triggers a browser download of `rows` (headers + data, already
+     * plain arrays of primitives) as a CSV file -- used by each page's
+     * "Download CSV" button to export whatever chart is currently in
+     * view. A value containing a comma, quote, or newline gets quoted
+     * (and its own quotes doubled) per the usual CSV convention;
+     * everything else is written as-is. */
+    function downloadCSV(filename, headerRow, dataRows) {
+        const escapeCell = (value) => {
+            const s = value == null ? "" : String(value);
+            return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        };
+        const csv = [headerRow, ...dataRows].map((row) => row.map(escapeCell).join(",")).join("\r\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    /** Filesystem-safe-ish filename fragment: lowercased, non-alphanumerics
+     * collapsed to single underscores, trimmed. Good enough for the
+     * question keys/labels this is used on -- not a general slugify. */
+    function slugify(text) {
+        return String(text)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "");
     }
 
     return {
         wrapText,
         scaledDimension,
+        downloadCSV,
+        slugify,
         buildToplineBarChart,
         buildTrendLineChart,
         buildDemographicStackedBarChart,

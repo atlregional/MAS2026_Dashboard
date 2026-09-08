@@ -466,9 +466,10 @@ a {
     color: white;
 }
 
-/* --- Crosstab card header row: the "Response by X Demographic (Year)"
-   heading plus the stacked/small-multiples view toggle, side by side. --- */
-.crosstab-card__header {
+/* --- Chart card toolbar row: a card's heading plus whatever controls sit
+   next to it (the stacked/small-multiples toggle, a "Download CSV" link)
+   -- reused across every chart card, not just the crosstab's. --- */
+.chart-card__toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -476,8 +477,36 @@ a {
     gap: 0.5rem 0.75rem;
 }
 
-.crosstab-card__header .section-heading {
+.chart-card__toolbar .section-heading {
     margin: 0;
+}
+
+/* Bottom-right "Download CSV" placement, under a card's chart/caption/tip
+   -- every chart card ends with one of these. */
+.chart-card__footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+.download-csv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    font-family: var(--font-family);
+    font-size: 13px;
+    color: var(--heading-blue);
+    background: none;
+    border: 1px solid var(--heading-blue);
+    border-radius: 14px;
+    padding: 5px 12px;
+    cursor: pointer;
+}
+
+.download-csv-btn:hover {
+    background: var(--heading-blue);
+    color: white;
 }
 
 /* A true sliding-switch look: one rounded track holding both labels, with
@@ -536,6 +565,7 @@ a {
    the "expanding apart" / "combining back together" feel with a fade-out
    -> swap -> fade-in instead of an instant cut. */
 #crosstab-container {
+    position: relative; /* anchors .cursor-tooltip (see attachCursorTooltip in charts.js) */
     transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
@@ -547,6 +577,26 @@ a {
 #crosstab-container.chart-transition-enter {
     opacity: 0;
     transform: scale(1.03);
+}
+
+/* Custom hover tooltip that follows the cursor (see attachCursorTooltip in
+   charts.js), used in place of Plotly's own hover label, which always
+   anchors to the data point (e.g. the end of a bar) rather than the mouse. */
+.cursor-tooltip {
+    position: absolute;
+    display: none;
+    pointer-events: none;
+    z-index: 20;
+    background: white;
+    border: 1px solid var(--grid-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: var(--font-family);
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
 }
 
 /* Small multiples can be wider than the card (one panel per response

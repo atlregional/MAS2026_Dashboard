@@ -42,21 +42,20 @@
     <div id="demo-segmented" class="demo-segmented"></div>
 
     <div class="chart-card">
-        <div class="crosstab-card__header">
+        <div class="chart-card__toolbar">
             <h2 class="section-heading" id="crosstab-heading"></h2>
             <div class="chart-view-toggle" id="chart-view-toggle"></div>
         </div>
         <div id="crosstab-container"></div>
-        <div class="section-caption" id="crosstab-caption" style="display:none;">
-            Note: Remaining percentages are either Don't Know or Not Available.
-            Percentages may vary slightly from those reported in other MAS products, go to FAQ for more details.
-        </div>
+        <div class="section-caption" id="crosstab-caption" style="display:none;"></div>
         <div id="tip-container"></div>
+        <div class="chart-card__footer"><button type="button" class="download-csv-btn" id="crosstab-download-btn">⬇ Download CSV</button></div>
     </div>
 
     <div class="chart-card" id="historical-card" style="display:none;">
         <h2 class="section-heading">Year-over-Year Trends</h2>
         <div id="historical-container"></div>
+        <div class="chart-card__footer"><button type="button" class="download-csv-btn" id="historical-download-btn">⬇ Download CSV</button></div>
     </div>
 </main>
 

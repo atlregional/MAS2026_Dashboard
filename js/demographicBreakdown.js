@@ -34,6 +34,13 @@
         chartView: "stacked", // "stacked" | "small-multiples" -- desktop only
     };
 
+    const CROSSTAB_NOTE = "Note: Remaining percentages are either Don't Know or Not Available. Percentages may vary slightly from those reported in other MAS products, go to FAQ for more details.";
+    // Only the stacked view has a legend (small multiples uses per-panel
+    // column headers instead) -- shown as a second line under the note
+    // above so the legend's own click/double-click behavior isn't
+    // something a user has to already know Plotly supports.
+    const LEGEND_HINT = "Tip: Click a legend entry to hide that response; double-click one to isolate it.";
+
     function validateYear(year, yearOptions) {
         return yearOptions.includes(year) ? year : yearOptions[0];
     }
@@ -220,6 +227,25 @@
         }, 180);
     }
 
+    /** Wires (or hides) a "Download CSV" button. buildExport() returns
+     * null when there's nothing valid to export right now -- the button
+     * hides rather than downloading a stale file left over from whatever
+     * was last successfully rendered. Re-run on every render, so .onclick
+     * (a plain property, not addEventListener) always reflects the
+     * current data rather than piling up old listeners. */
+    function wireDownloadButton(btnId, buildExport) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const exportData = buildExport();
+        if (!exportData) {
+            btn.style.display = "none";
+            btn.onclick = null;
+            return;
+        }
+        btn.style.display = "";
+        btn.onclick = () => MASCharts.downloadCSV(exportData.filename, exportData.headers, exportData.rows);
+    }
+
     function renderCrosstabSection() {
         const q = currentQuestionRecord();
         const demoColumn = currentDemoColumn();
@@ -253,6 +279,18 @@
         historicalCard.style.display = "none";
         captionEl.style.display = "none";
 
+        wireDownloadButton("crosstab-download-btn", () => {
+            if (!crosstab) return null;
+            return {
+                filename: `${MASCharts.slugify(q.key)}_${state.year}_${MASCharts.slugify(state.demographic)}.csv`,
+                headers: [state.demographic, ...crosstab.response_sort_order],
+                rows: crosstab.groups.map((g) => [
+                    g.group_display,
+                    ...crosstab.response_sort_order.map((r) => (g.percents[r] !== undefined ? (g.percents[r] * 100).toFixed(0) : "")),
+                ]),
+            };
+        });
+
         if (!crosstab) {
             // Same distinction the server app makes: does this (question, year)
             // have ANY data at all (topline would exist), or just not for this
@@ -267,6 +305,10 @@
         }
 
         captionEl.style.display = "";
+        captionEl.innerHTML =
+            !state.isMobile && state.chartView === "stacked"
+                ? `${CROSSTAB_NOTE}<br>${LEGEND_HINT}`
+                : CROSSTAB_NOTE;
 
         if (state.isMobile) {
             // Desktop-only heading stays blank here -- the mobile card list
@@ -351,6 +393,7 @@
         } else {
             card.style.display = "";
             container.innerHTML = `<div class="info-box">Selected question does not have historical data or has no valid time series data.</div>`;
+            wireDownloadButton("historical-download-btn", () => null);
         }
     }
 
@@ -367,9 +410,20 @@
         const chartTitle = isMobileCard
             ? `Historic ${rawValue} Response`
             : `${rawValue} (${toTitleCase(state.demographic)})`;
+        const historicalNote = "Note: The Historic Response Trends chart shows trends across ALL survey years, regardless of the year filter above.";
         containerEl.innerHTML = `
             <div id="${elId}" class="chart-container"></div>
-            <div class="section-caption">Note: The Historic Response Trends chart shows trends across ALL survey years, regardless of the year filter above.</div>`;
+            <div class="section-caption">${isMobileCard ? historicalNote : `${historicalNote}<br>${LEGEND_HINT}`}</div>`;
+        if (!isMobileCard) {
+            wireDownloadButton("historical-download-btn", () => {
+                const years = Object.keys(hist.by_year).sort();
+                return {
+                    filename: `${MASCharts.slugify(q.key)}_${MASCharts.slugify(state.demographic)}_${MASCharts.slugify(rawValue)}_trend.csv`,
+                    headers: ["Year", ...hist.sort_order],
+                    rows: years.map((y) => [y, ...hist.sort_order.map((r) => (hist.by_year[y][r] !== undefined ? (hist.by_year[y][r] * 100).toFixed(0) : ""))]),
+                };
+            });
+        }
         MASCharts.buildTrendLineChart(
             elId,
             hist.sort_order,
