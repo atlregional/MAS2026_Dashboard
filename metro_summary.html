@@ -11,7 +11,10 @@
 
 <header class="site-header">
     <div class="site-header__inner">
-        <a class="site-header__logo" href="index.html"><img src="assets/metro-atl-speaks.svg" alt="Metro Atlanta Speaks" width="350"></a>
+        <div class="site-header__brand">
+            <a class="site-header__arc-logo" href="https://atlantaregional.org/" target="_blank" rel="noopener"><img src="assets/arc-logo-blue-trans.png" alt="Atlanta Regional Commission"></a>
+            <a class="site-header__logo" href="index.html"><img src="assets/metro-atl-speaks.svg" alt="Metro Atlanta Speaks" width="350"></a>
+        </div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle-checkbox">
         <label for="nav-toggle" class="nav-toggle-btn" aria-label="Open menu"><span></span><span></span><span></span></label>
         <nav class="site-nav">
@@ -45,13 +48,19 @@
             Note: Remaining percentages are either Don't Know or Not Available.
             Percentages may vary slightly from those reported in other MAS products, go to FAQ for more details.
         </div>
-        <div class="chart-card__footer"><button type="button" class="download-csv-btn" id="topline-download-btn">⬇ Download CSV</button></div>
+        <div class="chart-card__footer">
+            <button type="button" class="download-csv-btn" id="topline-download-btn">⬇ Download CSV</button>
+            <button type="button" class="download-csv-btn" id="topline-download-img-btn">Download PNG</button>
+        </div>
     </div>
 
     <div class="chart-card">
         <h2 class="section-heading">Year-over-Year Trends</h2>
         <div id="trend-container"></div>
-        <div class="chart-card__footer"><button type="button" class="download-csv-btn" id="trend-download-btn">⬇ Download CSV</button></div>
+        <div class="chart-card__footer">
+            <button type="button" class="download-csv-btn" id="trend-download-btn">⬇ Download CSV</button>
+            <button type="button" class="download-csv-btn" id="trend-download-img-btn">Download PNG</button>
+        </div>
     </div>
 </main>
 

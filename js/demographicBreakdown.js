@@ -132,18 +132,42 @@
         });
     }
 
+    /** Desktop shows this as a dropdown sitting in the controls row
+     * (between the year and summary-type selectors); mobile keeps the
+     * original pill row, in its own spot below that row -- two separate
+     * elements, one shown and one hidden via display:none based on
+     * state.isMobile, same split as renderChartViewToggle() elsewhere in
+     * this file. */
     function renderDemographicSelector() {
         const demographics = MASData.getDemographics();
-        const container = document.getElementById("demo-segmented");
-        container.innerHTML = "";
-        demographics.forEach((d) => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.textContent = d.name;
-            if (d.name === state.demographic) btn.className = "selected";
-            btn.addEventListener("click", () => onDemographicChange(d.name));
-            container.appendChild(btn);
-        });
+        const desktopWrap = document.getElementById("demo-select-wrap");
+        const mobileWrap = document.getElementById("demo-segmented-wrap");
+
+        if (state.isMobile) {
+            desktopWrap.style.display = "none";
+            mobileWrap.style.display = "";
+            const container = document.getElementById("demo-segmented");
+            container.innerHTML = "";
+            demographics.forEach((d) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.textContent = d.name;
+                if (d.name === state.demographic) btn.className = "selected";
+                btn.addEventListener("click", () => onDemographicChange(d.name));
+                container.appendChild(btn);
+            });
+        } else {
+            mobileWrap.style.display = "none";
+            desktopWrap.style.display = "";
+            const select = document.getElementById("demo-select");
+            select.innerHTML = demographics
+                .map((d) => `<option value="${escapeHtml(d.name)}"${d.name === state.demographic ? " selected" : ""}>${escapeHtml(d.name)}</option>`)
+                .join("");
+            // A plain property assignment (not addEventListener) so
+            // re-calling this on every render replaces the old handler
+            // instead of piling up a new one each time.
+            select.onchange = () => onDemographicChange(select.value);
+        }
     }
 
     function onDemographicChange(newDemo) {
@@ -246,6 +270,22 @@
         btn.onclick = () => MASCharts.downloadCSV(exportData.filename, exportData.headers, exportData.rows);
     }
 
+    /** Wires (or hides) a "Download Image" button -- see metroSummary.js's
+     * identical helper for the full explanation. Pass chartElementId: null
+     * for anything that isn't a live Plotly chart right now (no data, or
+     * mobile's non-Plotly card-list view). */
+    function wireImageButton(btnId, chartElementId, filename) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (!chartElementId) {
+            btn.style.display = "none";
+            btn.onclick = null;
+            return;
+        }
+        btn.style.display = "";
+        btn.onclick = () => MASCharts.downloadChartImage(chartElementId, filename);
+    }
+
     function renderCrosstabSection() {
         const q = currentQuestionRecord();
         const demoColumn = currentDemoColumn();
@@ -279,10 +319,11 @@
         historicalCard.style.display = "none";
         captionEl.style.display = "none";
 
+        const crosstabBaseFilename = `${MASCharts.slugify(q.key)}_${state.year}_${MASCharts.slugify(state.demographic)}`;
         wireDownloadButton("crosstab-download-btn", () => {
             if (!crosstab) return null;
             return {
-                filename: `${MASCharts.slugify(q.key)}_${state.year}_${MASCharts.slugify(state.demographic)}.csv`,
+                filename: `${crosstabBaseFilename}.csv`,
                 headers: [state.demographic, ...crosstab.response_sort_order],
                 rows: crosstab.groups.map((g) => [
                     g.group_display,
@@ -299,6 +340,7 @@
             chartContainer.innerHTML = hasAnyData
                 ? `<div class="warning-box">${escapeHtml(state.demographic)} data not available for this question.</div>`
                 : `<div class="info-box">No data available for the selected filters.</div>`;
+            wireImageButton("crosstab-download-img-btn", null);
             restoreScroll();
             requestAnimationFrame(restoreScroll);
             return;
@@ -328,6 +370,7 @@
                     renderHistoricalChartInto(trendContainerEl, q, rawValue, true);
                 },
             });
+            wireImageButton("crosstab-download-img-btn", null); // mobile's card list isn't a Plotly chart
         } else {
             // "Response by X Demographic (Year)" -- styled the same
             // .section-heading blue as the Metro Summary page's card
@@ -347,6 +390,7 @@
                 chartContainer.innerHTML = `<div id="demo-stacked-chart" class="chart-container"></div>`;
                 MASCharts.buildDemographicStackedBarChart("demo-stacked-chart", crosstab, state.demographic, selectedValue, onSelect);
             }
+            wireImageButton("crosstab-download-img-btn", "demo-stacked-chart", `${crosstabBaseFilename}.png`);
             renderDesktopHistoricalSection(q, selectedValue);
         }
 
@@ -394,6 +438,7 @@
             card.style.display = "";
             container.innerHTML = `<div class="info-box">Selected question does not have historical data or has no valid time series data.</div>`;
             wireDownloadButton("historical-download-btn", () => null);
+            wireImageButton("historical-download-img-btn", null);
         }
     }
 
@@ -401,6 +446,7 @@
         const hist = MASData.getHistorical(q.key, state.demographic, rawValue);
         if (!hist || !Object.keys(hist.by_year).length) {
             containerEl.innerHTML = `<div class="info-box">Selected question does not have historical data or has no valid time series data.</div>`;
+            if (!isMobileCard) wireImageButton("historical-download-img-btn", null);
             return;
         }
         const elId = `historical-chart-${Math.random().toString(36).slice(2)}`;
@@ -415,14 +461,16 @@
             <div id="${elId}" class="chart-container"></div>
             <div class="section-caption">${isMobileCard ? historicalNote : `${historicalNote}<br>${LEGEND_HINT}`}</div>`;
         if (!isMobileCard) {
+            const histBaseFilename = `${MASCharts.slugify(q.key)}_${MASCharts.slugify(state.demographic)}_${MASCharts.slugify(rawValue)}_trend`;
             wireDownloadButton("historical-download-btn", () => {
                 const years = Object.keys(hist.by_year).sort();
                 return {
-                    filename: `${MASCharts.slugify(q.key)}_${MASCharts.slugify(state.demographic)}_${MASCharts.slugify(rawValue)}_trend.csv`,
+                    filename: `${histBaseFilename}.csv`,
                     headers: ["Year", ...hist.sort_order],
                     rows: years.map((y) => [y, ...hist.sort_order.map((r) => (hist.by_year[y][r] !== undefined ? (hist.by_year[y][r] * 100).toFixed(0) : ""))]),
                 };
             });
+            wireImageButton("historical-download-img-btn", elId, `${histBaseFilename}.png`);
         }
         MASCharts.buildTrendLineChart(
             elId,

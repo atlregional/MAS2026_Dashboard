@@ -17,6 +17,26 @@
     --label-color: #333333;
     --track-color: #ececec;
     --border-gray: #808080;
+    /* WCAG 2.2 SC 1.4.3 (4.5:1): #808080 only reaches ~3.95:1 against
+       white and ~2.17:1 for white text on top of it -- this is the same
+       gray, darkened just enough (verified against the exact relative-
+       luminance formula) to clear 4.5:1 in both directions, used only
+       where --border-gray was standing in for *text* (a switch label, an
+       icon's own text) rather than a border. --border-gray itself is left
+       alone since every other place it's used is a non-text border. */
+    --accessible-gray: #757575;
+    /* WCAG 2.1/2.2 SC 1.4.11 (3:1): the light grays this was borrowing
+       (#cfcfcf, #e0e0e0) as borders on real form controls (the demographic
+       dropdown, the question-picker panel, year/mode/demographic buttons,
+       the mobile <details> disclosures) only reach ~1.3-1.6:1 against
+       white -- their boundary is essentially imperceptible. This is the
+       same gray family, darkened to clear 3:1 with margin against white,
+       --header-bg, and --card-bg alike. Only used where a light gray was
+       standing in for an interactive control's boundary -- purely
+       decorative dividers/accents (.section-divider, .chart-card,
+       .info-box's stripe, etc.) are untouched since 1.4.11 doesn't apply
+       to them. */
+    --control-border: #8d8d8d;
     --grid-color: #e5e5e5;
     --header-bg: #f9f9f9;
     --card-bg: #f9f6f0;          /* off-white chart-card background */
@@ -71,6 +91,34 @@ a {
     justify-content: space-between;
     gap: 1rem 1.5rem;
     flex-wrap: wrap;
+}
+
+/* Groups the ARC logo and the site's own logo together as one flex item,
+   so the pair moves/wraps as a unit against the nav links on the other
+   side of .site-header__inner's space-between. flex-end (not center): the
+   ARC logo is sized to exactly the height of the "METRO ATLANTA SPEAKS"
+   wordmark within the site logo's own SVG (measured at its actual
+   rendered bounding box, top of "METRO ATLANTA" to bottom of "SPEAKS" --
+   ~93.3% of the SVG's full viewBox height, and the wordmark's own bottom
+   happens to already land flush with the SVG's own bottom edge), so
+   bottom-aligning
+   the two logos makes the ARC logo's top and bottom land exactly on the
+   wordmark's top and bottom, without needing to know the icon's own
+   separate bounds. */
+.site-header__brand {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.site-header__arc-logo {
+    display: inline-flex;
+}
+
+.site-header__arc-logo img {
+    height: 52.25px;
+    width: auto;
+    display: block;
 }
 
 .site-header__logo {
@@ -149,7 +197,10 @@ a {
 .intro-blurb .subline {
     display: block;
     margin-top: 0.5rem;
-    color: #29ABE2;
+    /* #29ABE2 was ~2.6:1 on white -- fails WCAG 2.2 SC 1.4.3 even under
+       the large-text 3:1 allowance. Darkened to #177da9 (~4.6:1), same
+       hue. */
+    color: #177da9;
     font-size: 20px;
     font-weight: 600;
 }
@@ -177,7 +228,11 @@ a {
 }
 
 .section-caption {
-    color: #8a8a8a;
+    /* #8a8a8a was ~3.2:1 on --card-bg -- fails WCAG 2.2 SC 1.4.3 (4.5:1).
+       Reuses --title-font-color (already used for chart titles/subtitles,
+       already verified at ~6.5:1 on --card-bg) for a bit more contrast
+       than the minimum fix needed. */
+    color: var(--title-font-color);
     font-size: 14px;
     margin-top: 0.5rem;
 }
@@ -216,6 +271,24 @@ a {
 
 .controls-row__years {
     flex: 1 1 320px;
+}
+
+.controls-row__demographic {
+    flex: 0 0 auto;
+    margin-right: 1.5rem;
+}
+
+.demo-select {
+    display: block;
+    font-family: var(--font-family);
+    font-size: 14px;
+    padding: 8px 32px 8px 12px;
+    border: 1px solid var(--control-border);
+    border-radius: 8px;
+    background: white;
+    color: var(--text-color);
+    cursor: pointer;
+    min-width: 190px;
 }
 
 /* Sized to its own content (not stretched) so the year pills get all the
@@ -287,7 +360,7 @@ a {
     max-height: 420px;
     overflow-y: auto;
     background: white;
-    border: 1px solid #cfcfcf;
+    border: 1px solid var(--control-border);
     border-radius: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     z-index: 500;
@@ -305,10 +378,20 @@ a {
     text-align: left;
 }
 
-.qpicker__option:hover,
+.qpicker__option:hover {
+    background: #eaf3fb;
+}
+
+/* WCAG 2.1/2.2 SC 1.4.11 (3:1): removing the outline and relying only on
+   the #eaf3fb tint above left keyboard focus almost invisible (~1.1:1
+   against the panel's white background) -- fine as a mouse-hover cue,
+   nowhere near enough as the *only* indicator of which option is
+   focused. Keyboard focus gets its own real outline (~6.2:1) on top of
+   the same tint, rather than just the tint alone. */
 .qpicker__option:focus {
     background: #eaf3fb;
-    outline: none;
+    outline: 2px solid var(--heading-blue);
+    outline-offset: -2px;
 }
 
 .qpicker__option.selected {
@@ -344,12 +427,19 @@ a {
 }
 
 .qpicker-trend--available {
-    color: #15803d;
+    /* #15803d was ~4.47:1 on the option-row hover/selected background
+       (#eaf3fb) -- just under WCAG 2.2 SC 1.4.3's 4.5:1. Darkened
+       fractionally to #157e3c (~4.6:1), imperceptibly different. */
+    color: #157e3c;
     font-weight: 600;
 }
 
 .qpicker-trend--none {
-    color: #9ca3af;
+    /* #9ca3af was ~2.3-2.5:1 depending on background -- fails WCAG 2.2 SC
+       1.4.3 (4.5:1). Darkened to #656e7d, which clears 4.6:1 against
+       both backgrounds it appears on (white and the hover/selected
+       #eaf3fb). */
+    color: #656e7d;
     font-style: italic;
 }
 
@@ -366,7 +456,9 @@ a {
     height: 15px;
     margin-left: 6px;
     border-radius: 50%;
-    background: #b0b0b0;
+    /* #b0b0b0 gave the white "?" only ~2.17:1 -- fails WCAG 2.2 SC 1.4.3
+       (4.5:1) badly. --accessible-gray clears 4.6:1. */
+    background: var(--accessible-gray);
     color: white;
     font-size: 10px;
     font-weight: 700;
@@ -430,7 +522,7 @@ a {
     font-family: var(--font-family);
     font-size: 14px;
     padding: 4px 10px;
-    border: 1px solid #cfcfcf;
+    border: 1px solid var(--control-border);
     border-radius: 16px;
     background: white;
     color: var(--text-color);
@@ -446,7 +538,7 @@ a {
 /* Topline/Detailed pill selector (mirrors st.pills) */
 .mode-pills {
     display: inline-flex;
-    border: 1px solid #cfcfcf;
+    border: 1px solid var(--control-border);
     border-radius: 20px;
     overflow: hidden;
 }
@@ -486,6 +578,8 @@ a {
 .chart-card__footer {
     display: flex;
     justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     margin-top: 0.75rem;
 }
 
@@ -523,7 +617,11 @@ a {
     flex: 0 0 auto;
     gap: 2px;
     padding: 3px;
-    background: var(--border-gray);
+    /* --border-gray (#808080) only gave the white label text ~3.3-4.0:1
+       here -- fails WCAG 2.2 SC 1.4.3 (4.5:1). --accessible-gray clears
+       4.6:1 in both this direction and the selected-label direction
+       below. */
+    background: var(--accessible-gray);
     border-radius: 18px;
     cursor: pointer;
 }
@@ -549,13 +647,18 @@ a {
     border: none;
     border-radius: 15px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.85);
+    /* Was 85% opacity -- even against the darker --accessible-gray track,
+       that composites to too light a gray to clear 4.5:1 (only pure
+       white does, at ~4.6:1). The selected/unselected states are already
+       clearly distinguished by the white pill background switching sides,
+       so losing this opacity dimming doesn't cost any legibility. */
+    color: #ffffff;
     cursor: pointer;
     transition: color 0.2s ease;
 }
 
 .chart-view-toggle button.selected {
-    color: var(--border-gray);
+    color: var(--accessible-gray);
 }
 
 /* Crossfade + gentle scale applied to the crosstab chart when switching
@@ -565,7 +668,6 @@ a {
    the "expanding apart" / "combining back together" feel with a fade-out
    -> swap -> fade-in instead of an instant cut. */
 #crosstab-container {
-    position: relative; /* anchors .cursor-tooltip (see attachCursorTooltip in charts.js) */
     transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
@@ -581,14 +683,21 @@ a {
 
 /* Custom hover tooltip that follows the cursor (see attachCursorTooltip in
    charts.js), used in place of Plotly's own hover label, which always
-   anchors to the data point (e.g. the end of a bar) rather than the mouse. */
+   anchors to the data point (e.g. the end of a bar) rather than the mouse.
+   Appended straight to <body> and positioned `fixed` in viewport
+   coordinates, rather than `absolute` inside the chart's own container --
+   a scrollable container (e.g. small multiples' horizontal-scroll wrapper)
+   would otherwise clip it for any bar near that container's own edge. */
 .cursor-tooltip {
-    position: absolute;
+    position: fixed;
     display: none;
     pointer-events: none;
-    z-index: 20;
+    z-index: 1000;
     background: white;
-    border: 1px solid var(--grid-color);
+    /* --grid-color (#e5e5e5) is only ~1.26:1 against white -- fine for a
+       gridline, fails WCAG SC 1.4.11's 3:1 as this tooltip's own
+       boundary. --control-border clears 3.3:1. */
+    border: 1px solid var(--control-border);
     border-radius: 6px;
     padding: 6px 10px;
     font-family: var(--font-family);
@@ -619,7 +728,7 @@ a {
     font-family: var(--font-family);
     font-size: 13px;
     padding: 6px 14px;
-    border: 1px solid #cfcfcf;
+    border: 1px solid var(--control-border);
     border-radius: 16px;
     background: white;
     color: var(--text-color);
@@ -635,6 +744,16 @@ a {
 /* --- Chart container --- */
 .chart-container {
     width: 100%;
+    /* iOS Safari's native double-tap-to-zoom gesture can misfire on a
+       quick tap over an interactive chart element (reported live: a tap
+       on a mobile line chart's point made the chart visibly resize/
+       "spaz" -- a long-press worked reliably instead, consistent with a
+       double-tap-zoom gesture being misdetected from a fast single tap).
+       "manipulation" disables that double-tap gesture specifically while
+       leaving pinch-to-zoom intact, so this doesn't touch page zoom
+       accessibility -- just the tap-specific gesture that was conflicting
+       with tapping a chart to see its tooltip. */
+    touch-action: manipulation;
 }
 
 /* --- Chart card: the off-white panel behind a section's heading, its
@@ -757,7 +876,7 @@ a {
 
 /* --- Mobile question picker (ported from mobile_views.render_question_picker) --- */
 .mobile-qpicker {
-    border: 1px solid #cfcfcf;
+    border: 1px solid var(--control-border);
     border-radius: 6px;
     margin-bottom: 1rem;
 }
@@ -805,7 +924,8 @@ a {
 
 .mobile-qpicker__caption {
     font-size: 12px;
-    color: #808080;
+    /* #808080 was ~3.95:1 on white -- fails WCAG 2.2 SC 1.4.3 (4.5:1). */
+    color: var(--accessible-gray);
     margin-bottom: 6px;
 }
 
@@ -816,7 +936,7 @@ a {
     font-size: 14px;
     padding: 10px;
     margin-bottom: 4px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--control-border);
     border-radius: 5px;
     background: white;
     color: var(--text-color);
@@ -970,7 +1090,7 @@ a {
 
 /* --- FAQ page --- */
 .faq-item {
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--control-border);
     border-radius: 6px;
     margin-bottom: 10px;
 }
@@ -1021,6 +1141,12 @@ a {
 }
 
 @media (max-width: 768px) {
+    .site-header__arc-logo img {
+        height: 39.2px;
+    }
+    .site-header__brand {
+        gap: 10px;
+    }
     .site-header__logo img {
         height: 42px;
     }
@@ -1068,8 +1194,8 @@ a {
         flex-direction: column;
         gap: 0;
         background: var(--header-bg);
-        border-top: 1px solid #e0e0e0;
-        border-bottom: 1px solid #e0e0e0;
+        border-top: 1px solid var(--control-border);
+        border-bottom: 1px solid var(--control-border);
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         padding: 0.25rem 1rem;
     }

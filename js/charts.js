@@ -17,6 +17,11 @@
 const MASCharts = (() => {
     const TITLE_FONT_COLOR = "#59595b";
     const GRID_COLOR = "#e5e5e5";
+    // Matches --control-border in style.css: WCAG SC 1.4.11 (3:1) --
+    // GRID_COLOR (#e5e5e5) is only ~1.26:1 against white, fine for a
+    // gridline but too faint to serve as a component boundary like a
+    // tooltip's own outline.
+    const TOOLTIP_BORDER_COLOR = "#8d8d8d";
     const FONT_FAMILY_CSS = "'Barlow', sans-serif";
     const FALLBACK_BAR_COLOR = "#999999";
     // Every chart renders with a transparent background rather than an
@@ -57,27 +62,41 @@ const MASCharts = (() => {
      * motion), so this also tracks raw mousemove while a point is active to
      * keep the tooltip actually following the cursor around within it. */
     function attachCursorTooltip(gd, renderContent) {
-        const container = gd.parentElement;
-        if (!container) return;
-        // Anchors the tooltip's absolute positioning to this container --
-        // set programmatically rather than relying on each page's CSS to
-        // remember it, so this works for any chart's container without
-        // extra bookkeeping.
-        if (getComputedStyle(container).position === "static") {
-            container.style.position = "relative";
-        }
-        let tooltipEl = container.querySelector(".cursor-tooltip");
+        // Appended to <body>, positioned with `fixed` (viewport
+        // coordinates), rather than living inside the chart's own
+        // container with `absolute` -- confirmed live that the small
+        // multiples chart's scrollable wrapper (overflow-x: auto, which
+        // forces overflow-y: auto too) was clipping the tooltip for any
+        // bar near its right or bottom edge. `fixed` positioning escapes
+        // that ancestor's clipping entirely. Re-renders of the same chart
+        // slot (a stable elementId, e.g. "demo-stacked-chart") reuse the
+        // same tooltip element rather than piling up a fresh orphaned one
+        // in <body> every time.
+        let tooltipEl = document.querySelector(`.cursor-tooltip[data-for="${gd.id}"]`);
         if (!tooltipEl) {
             tooltipEl = document.createElement("div");
             tooltipEl.className = "cursor-tooltip";
-            container.appendChild(tooltipEl);
+            tooltipEl.dataset.for = gd.id;
+            document.body.appendChild(tooltipEl);
         }
         let active = false;
 
+        const OFFSET = 8;
         const position = (clientX, clientY) => {
-            const rect = container.getBoundingClientRect();
-            tooltipEl.style.left = `${clientX - rect.left + 8}px`;
-            tooltipEl.style.top = `${clientY - rect.top + 8}px`;
+            // Flips to the other side of the cursor on whichever axis
+            // would otherwise push the tooltip past the *browser
+            // window's* edge, not just the chart's -- the user's other
+            // complaint ("atrocious on the bottom right") was really the
+            // same clipping bug, but this guards the viewport edge too
+            // now that nothing else is clipping it.
+            const w = tooltipEl.offsetWidth;
+            const h = tooltipEl.offsetHeight;
+            let left = clientX + OFFSET;
+            if (left + w > window.innerWidth) left = clientX - OFFSET - w;
+            let top = clientY + OFFSET;
+            if (top + h > window.innerHeight) top = clientY - OFFSET - h;
+            tooltipEl.style.left = `${Math.max(0, left)}px`;
+            tooltipEl.style.top = `${Math.max(0, top)}px`;
         };
 
         gd.removeAllListeners && gd.removeAllListeners("plotly_hover");
@@ -164,6 +183,7 @@ const MASCharts = (() => {
 
         const layout = {
             height,
+            dragmode: false, // no click-drag pan/zoom -- these percentages are fixed, not something to be dragged around
             font: { family: FONT_FAMILY_CSS },
             title: {
                 text: `<i>${wrappedTitle}</i>`,
@@ -192,7 +212,7 @@ const MASCharts = (() => {
         };
 
         const gd = document.getElementById(elementId);
-        Plotly.newPlot(gd, traces, layout, { responsive: true, displaylogo: false });
+        Plotly.newPlot(gd, traces, layout, { responsive: true, displaylogo: false, displayModeBar: false, doubleClick: false });
         attachCursorTooltip(gd, (point) => `Response: ${point.data.name}<br>Percent: ${Math.round(point.x * 100)}%`);
     }
 
@@ -211,6 +231,21 @@ const MASCharts = (() => {
     function buildTrendLineChart(elementId, sortOrder, colors, byYear, chartTitle, endDate, isMobile, demographic) {
         const years = Object.keys(byYear).sort();
         const minDate = `${years[0]}-01-01`;
+
+        // Unlike every other chart's title here, this one was never wrapped
+        // at all -- fine on a full-width desktop card, but on a narrow
+        // mobile chart (and mobile's per-card historical view, which is
+        // narrower still, nested inside a .demo-card) a long title (e.g.
+        // "Historic City of Atlanta Response") ran past the chart's own
+        // edge and got clipped. Measures the actual container width at
+        // render time (same approach as the small multiples chart's title)
+        // rather than a fixed mobile-vs-desktop guess, since this single
+        // function renders into containers of very different widths
+        // depending on which page/view calls it.
+        const containerEl = document.getElementById(elementId);
+        const containerWidth = (containerEl && containerEl.parentElement && containerEl.parentElement.clientWidth) || (isMobile ? 320 : 900);
+        const titleLines = wrapText(chartTitle, Math.max(20, Math.floor(containerWidth / 8.5)));
+        const wrappedTitle = titleLines.join("<br>");
 
         const hovertemplate = demographic
             ? `${demographic.label}: ${demographic.value}<br>Response: %{fullData.name}<br>Percent: %{y:.0%}<br>Year: %{x|%Y}<extra></extra>`
@@ -234,13 +269,23 @@ const MASCharts = (() => {
             }));
 
         const layout = {
+            dragmode: false, // no click-drag pan/zoom -- these percentages are fixed, not something to be dragged around
             font: { family: FONT_FAMILY_CSS },
-            title: { text: chartTitle, font: { size: 18, color: TITLE_FONT_COLOR } },
+            title: { text: wrappedTitle, font: { size: 18, color: TITLE_FONT_COLOR } },
             legend: isMobile ? MOBILE_LEGEND : DESKTOP_LEGEND,
             hovermode: "closest",
+            // Plotly's default hover label uses each trace's own line
+            // color as its background (confirmed live: an orange line's
+            // tooltip rendered on a bright rgb(255,159,88) background,
+            // with the same fixed dark-gray text Plotly always uses) --
+            // fine for some trace colors, not guaranteed for all of them.
+            // Pinned to a consistent white background + dark gray text
+            // (~6.5:1, comfortably over WCAG's 4.5:1) regardless of which
+            // line is hovered.
+            hoverlabel: { bgcolor: "#ffffff", bordercolor: TOOLTIP_BORDER_COLOR, font: { color: TITLE_FONT_COLOR } },
             plot_bgcolor: CHART_BG_COLOR,
             paper_bgcolor: CHART_BG_COLOR,
-            margin: { t: 60, l: 60, r: 20, b: 60 },
+            margin: { t: titleMarginTop(titleLines.length, 60), l: 60, r: 20, b: 60 },
             xaxis: {
                 type: "date",
                 range: [minDate, endDate],
@@ -255,8 +300,48 @@ const MASCharts = (() => {
             },
         };
 
-        const config = isMobile ? { staticPlot: true } : { responsive: true, displaylogo: false };
-        Plotly.newPlot(elementId, traces, layout, config);
+        // staticPlot used to disable all interactivity on mobile, which
+        // meant no tooltip at all on touch devices. Removed -- now that
+        // dragmode is off above, a tap doesn't fight page scrolling the
+        // way a drag-to-pan gesture could have.
+        const config = { responsive: true, displaylogo: false, displayModeBar: false, doubleClick: false };
+        const gd = document.getElementById(elementId);
+        Plotly.newPlot(gd, traces, layout, config);
+
+        // Plotly's own hover detection is mouse-driven -- confirmed live
+        // (real touch-event simulation via CDP, not just Playwright's
+        // higher-level helpers) that a tap alone never fires
+        // plotly_hover/plotly_click here, on this Plotly version, so
+        // mobile would still show nothing on tap without this. A plain
+        // "click" DOM listener *does* fire reliably from a tap (browsers
+        // synthesize it independent of Plotly's own gesture recognition),
+        // so this finds whichever marker is screen-closest to the tap and
+        // asks Plotly to show its hover label for it via the public
+        // Fx.hover API -- same label, same styling, as a real hover.
+        // Tapping far from any marker (the title, the margins) clears it
+        // instead of anchoring to something irrelevant.
+        const TAP_HOVER_RADIUS = 40;
+        gd.addEventListener("click", (evt) => {
+            let best = null;
+            let bestDistSq = Infinity;
+            gd.querySelectorAll(".scatterlayer .trace").forEach((traceGroup, curveNumber) => {
+                traceGroup.querySelectorAll(".points path.point").forEach((pt, pointNumber) => {
+                    const r = pt.getBoundingClientRect();
+                    const dx = r.x + r.width / 2 - evt.clientX;
+                    const dy = r.y + r.height / 2 - evt.clientY;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < bestDistSq) {
+                        bestDistSq = distSq;
+                        best = { curveNumber, pointNumber };
+                    }
+                });
+            });
+            if (best && Math.sqrt(bestDistSq) <= TAP_HOVER_RADIUS) {
+                Plotly.Fx.hover(gd, [best]);
+            } else {
+                Plotly.Fx.unhover(gd);
+            }
+        });
     }
 
     /**
@@ -328,6 +413,7 @@ const MASCharts = (() => {
 
         const layout = {
             barmode: "stack",
+            dragmode: false, // no click-drag pan/zoom -- these percentages are fixed, not something to be dragged around
             legend: DESKTOP_LEGEND,
             height,
             hovermode: "closest",
@@ -374,7 +460,7 @@ const MASCharts = (() => {
         // animations/etc. settle) with hit-testing wired up, so attaching
         // here closes that window -- verified 8/8 reliable afterward.
         const gd = document.getElementById(elementId);
-        Plotly.newPlot(gd, traces, layout, { responsive: true, displaylogo: false });
+        Plotly.newPlot(gd, traces, layout, { responsive: true, displaylogo: false, displayModeBar: false, doubleClick: false });
         gd.removeAllListeners && gd.removeAllListeners("plotly_click");
         gd.on("plotly_click", (evt) => {
             if (!evt || !evt.points || !evt.points.length) return;
@@ -552,17 +638,19 @@ const MASCharts = (() => {
         const headerBlockHeight = maxHeaderLines * HEADER_LINE_HEIGHT;
         const marginTop = TOP_PAD + titleBlockHeight + TITLE_HEADER_GAP + headerBlockHeight + PLOT_GAP;
 
-        // Clicking a column header sorts every panel's rows by that
-        // response's percentage, most to least -- clicking the same header
-        // again reverts to the default order. All panels share one row
-        // order (only panel 0 shows labels, so every panel MUST stay in
-        // the same order or the unlabeled panels' rows would no longer line
-        // up with panel 0's), so sorting by one response reorders all of
-        // them at once via their y-axes' categoryarray, not just the
-        // clicked panel's own.
+        // Clicking a column header cycles that response's sort through
+        // three states: most-to-least, least-to-most, then back to the
+        // default order -- clicking a *different* header starts that same
+        // cycle fresh from most-to-least, matching a typical sortable-table
+        // convention. All panels share one row order (only panel 0 shows
+        // labels, so every panel MUST stay in the same order or the
+        // unlabeled panels' rows would no longer line up with panel 0's),
+        // so sorting by one response reorders all of them at once via
+        // their y-axes' categoryarray, not just the clicked panel's own.
         let activeSortResponse = null;
+        let activeSortDirection = null; // "desc" | "asc" -- only meaningful while activeSortResponse is set
 
-        function sortedGroupOrder(sortResponse) {
+        function sortedGroupOrder(sortResponse, direction) {
             if (!sortResponse) return orderedGroups;
             const withValue = [];
             const withoutValue = [];
@@ -574,7 +662,7 @@ const MASCharts = (() => {
                     withoutValue.push(groupDisplay);
                 }
             }
-            withValue.sort((a, b) => b.value - a.value);
+            withValue.sort((a, b) => (direction === "asc" ? a.value - b.value : b.value - a.value));
             return [...withValue.map((g) => g.groupDisplay), ...withoutValue];
         }
 
@@ -583,10 +671,11 @@ const MASCharts = (() => {
         // Every header carries a small "⇅" so the sort feature is
         // discoverable at a glance -- clicking a bare header with no visual
         // cue isn't something a user would think to try. The active column
-        // swaps its "⇅" for a "▼" to show which sort is currently applied.
-        function buildHeaderAnnotations(sortResponse) {
+        // swaps its "⇅" for "▼" (descending) or "▲" (ascending) to show
+        // which sort is currently applied.
+        function buildHeaderAnnotations(sortResponse, direction) {
             return panelResponses.map((response, i) => ({
-                text: wrappedHeaders[i].join("<br>") + (response === sortResponse ? " ▼" : " ⇅"),
+                text: wrappedHeaders[i].join("<br>") + (response === sortResponse ? (direction === "asc" ? " ▲" : " ▼") : " ⇅"),
                 xref: `x${i + 1} domain`,
                 yref: "paper",
                 x: 0.5,
@@ -605,6 +694,7 @@ const MASCharts = (() => {
             grid: { rows: 1, columns: nPanels, pattern: "independent" },
             width,
             height,
+            dragmode: false, // no click-drag pan/zoom -- these percentages are fixed, not something to be dragged around
             hovermode: "closest",
             bargap: BARGAP,
             plot_bgcolor: CHART_BG_COLOR,
@@ -620,7 +710,7 @@ const MASCharts = (() => {
                 yanchor: "top",
                 pad: { t: TOP_PAD },
             },
-            annotations: buildHeaderAnnotations(activeSortResponse),
+            annotations: buildHeaderAnnotations(activeSortResponse, activeSortDirection),
         };
 
         panelResponses.forEach((response, i) => {
@@ -647,7 +737,7 @@ const MASCharts = (() => {
         // (see its comment) -- avoids the same click-lands-during-the-gap-
         // before-the-handler-reattaches race.
         const gd = document.getElementById(elementId);
-        Plotly.newPlot(gd, traces, layout, { responsive: false, displaylogo: false });
+        Plotly.newPlot(gd, traces, layout, { responsive: false, displaylogo: false, displayModeBar: false, doubleClick: false });
         gd.removeAllListeners && gd.removeAllListeners("plotly_click");
         gd.on("plotly_click", (evt) => {
             if (!evt || !evt.points || !evt.points.length) return;
@@ -664,8 +754,19 @@ const MASCharts = (() => {
             if (!evt || evt.index == null) return;
             const response = panelResponses[evt.index];
             if (!response) return;
-            activeSortResponse = activeSortResponse === response ? null : response;
-            const newOrder = sortedGroupOrder(activeSortResponse);
+            if (activeSortResponse !== response) {
+                // A different column (or nothing) was active -- start this
+                // one's cycle fresh at descending, not wherever the last
+                // column's cycle happened to be.
+                activeSortResponse = response;
+                activeSortDirection = "desc";
+            } else if (activeSortDirection === "desc") {
+                activeSortDirection = "asc";
+            } else {
+                activeSortResponse = null;
+                activeSortDirection = null;
+            }
+            const newOrder = sortedGroupOrder(activeSortResponse, activeSortDirection);
             const axisUpdate = {};
             panelResponses.forEach((_, i) => {
                 // Plotly.relayout quirk (confirmed live): the first axis has
@@ -676,7 +777,7 @@ const MASCharts = (() => {
                 const axisKey = i === 0 ? "yaxis" : `yaxis${i + 1}`;
                 axisUpdate[`${axisKey}.categoryarray`] = newOrder;
             });
-            Plotly.relayout(gd, { ...axisUpdate, annotations: buildHeaderAnnotations(activeSortResponse) });
+            Plotly.relayout(gd, { ...axisUpdate, annotations: buildHeaderAnnotations(activeSortResponse, activeSortDirection) });
         });
         attachCursorTooltip(gd, (point) => {
             return `${demographicLabel}: ${point.y}<br>Response: ${point.data.name}<br>Percent: ${Math.round(point.x * 100)}%`;
@@ -716,10 +817,60 @@ const MASCharts = (() => {
             .replace(/^_+|_+$/g, "");
     }
 
+    /** Triggers a PNG download of whatever's currently plotted in
+     * elementId, via Plotly's own export (the same thing the modebar's
+     * camera icon used to call) -- used by each page's "Download Image"
+     * button now that the modebar itself is turned off everywhere
+     * (displayModeBar: false, see each build* function's config). Silently
+     * does nothing if elementId isn't a live Plotly chart (e.g. mobile's
+     * card-list views, which never call Plotly.newPlot at all). */
+    function downloadChartImage(elementId, filename) {
+        const gd = document.getElementById(elementId);
+        if (!gd || !gd.data) return;
+        // Plotly.downloadImage appends the format's own extension itself
+        // (confirmed live: passing "foo.png" downloaded "foo.png.png") --
+        // strip a trailing .png here so every caller can just pass a plain
+        // descriptive name without needing to know that.
+        const name = filename.replace(/\.png$/i, "");
+
+        // automargin's on-screen margin.l isn't reliable enough to trust
+        // for the exported image. Confirmed live with a chart that showed
+        // zero visible clipping on screen (every y-axis label had a couple
+        // pixels of breathing room, however slim) but still cropped its
+        // widest label in the exported PNG regardless -- comparing each
+        // label's on-screen position against the chart's own left edge
+        // (i.e. checking for *overflow*) still isn't a reliable enough
+        // margin, apparently because whatever Plotly's export path
+        // measures text with doesn't perfectly agree with the live DOM.
+        // What *does* work, confirmed live: measuring the widest y-tick
+        // label's own rendered *width* and setting margin.l to comfortably
+        // exceed it outright (not just relative to whatever margin
+        // currently exists) -- a direct guarantee instead of a delta on
+        // top of a number that's already shown itself untrustworthy.
+        // Restored immediately after export, so the on-screen chart is
+        // completely unaffected.
+        let maxLabelWidth = 0;
+        gd.querySelectorAll(".ytick text").forEach((tick) => {
+            maxLabelWidth = Math.max(maxLabelWidth, tick.getBoundingClientRect().width);
+        });
+        const originalMarginL = gd._fullLayout.margin.l;
+        const neededMarginL = maxLabelWidth > 0 ? Math.ceil(maxLabelWidth) + 20 : 0;
+
+        if (neededMarginL <= originalMarginL) {
+            Plotly.downloadImage(gd, { format: "png", filename: name });
+            return;
+        }
+        Plotly.relayout(gd, { "margin.l": neededMarginL })
+            .then(() => Plotly.downloadImage(gd, { format: "png", filename: name }))
+            .then(() => Plotly.relayout(gd, { "margin.l": originalMarginL }))
+            .catch(() => Plotly.relayout(gd, { "margin.l": originalMarginL }));
+    }
+
     return {
         wrapText,
         scaledDimension,
         downloadCSV,
+        downloadChartImage,
         slugify,
         buildToplineBarChart,
         buildTrendLineChart,

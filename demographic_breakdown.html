@@ -11,7 +11,10 @@
 
 <header class="site-header">
     <div class="site-header__inner">
-        <a class="site-header__logo" href="index.html"><img src="assets/metro-atl-speaks.svg" alt="Metro Atlanta Speaks" width="350"></a>
+        <div class="site-header__brand">
+            <a class="site-header__arc-logo" href="https://atlantaregional.org/" target="_blank" rel="noopener"><img src="assets/arc-logo-blue-trans.png" alt="Atlanta Regional Commission"></a>
+            <a class="site-header__logo" href="index.html"><img src="assets/metro-atl-speaks.svg" alt="Metro Atlanta Speaks" width="350"></a>
+        </div>
         <input type="checkbox" id="nav-toggle" class="nav-toggle-checkbox">
         <label for="nav-toggle" class="nav-toggle-btn" aria-label="Open menu"><span></span><span></span><span></span></label>
         <nav class="site-nav">
@@ -32,14 +35,20 @@
             <span class="field-label">Select Survey Year<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select which MAS survey year to use for the graph</span></span></span>
             <div id="year-radio-group" class="year-radio-group"></div>
         </div>
+        <div class="controls-row__demographic" id="demo-select-wrap">
+            <span class="field-label">Select Demographic<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select demographic type to breakdown results by</span></span></span>
+            <select id="demo-select" class="demo-select"></select>
+        </div>
         <div class="controls-row__mode">
             <span class="field-label">Select Summary Type<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Display summary responses for the whole Metro Atlanta Region (Topline) or responses broken down by demographic (Detailed)</span></span></span>
             <div id="mode-pills" class="mode-pills"></div>
         </div>
     </div>
 
-    <span class="field-label">Select Demographic<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select demographic type to breakdown results by</span></span></span>
-    <div id="demo-segmented" class="demo-segmented"></div>
+    <div id="demo-segmented-wrap">
+        <span class="field-label">Select Demographic<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select demographic type to breakdown results by</span></span></span>
+        <div id="demo-segmented" class="demo-segmented"></div>
+    </div>
 
     <div class="chart-card">
         <div class="chart-card__toolbar">
@@ -49,13 +58,19 @@
         <div id="crosstab-container"></div>
         <div class="section-caption" id="crosstab-caption" style="display:none;"></div>
         <div id="tip-container"></div>
-        <div class="chart-card__footer"><button type="button" class="download-csv-btn" id="crosstab-download-btn">⬇ Download CSV</button></div>
+        <div class="chart-card__footer">
+            <button type="button" class="download-csv-btn" id="crosstab-download-btn">⬇ Download CSV</button>
+            <button type="button" class="download-csv-btn" id="crosstab-download-img-btn">Download PNG</button>
+        </div>
     </div>
 
     <div class="chart-card" id="historical-card" style="display:none;">
         <h2 class="section-heading">Year-over-Year Trends</h2>
         <div id="historical-container"></div>
-        <div class="chart-card__footer"><button type="button" class="download-csv-btn" id="historical-download-btn">⬇ Download CSV</button></div>
+        <div class="chart-card__footer">
+            <button type="button" class="download-csv-btn" id="historical-download-btn">⬇ Download CSV</button>
+            <button type="button" class="download-csv-btn" id="historical-download-img-btn">Download PNG</button>
+        </div>
     </div>
 </main>
 

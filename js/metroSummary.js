@@ -121,16 +121,35 @@
         btn.onclick = () => MASCharts.downloadCSV(exportData.filename, exportData.headers, exportData.rows);
     }
 
+    /** Wires (or hides) a "Download Image" button. Unlike wireDownloadButton
+     * above, this has to run *after* the chart itself has actually been
+     * (re)built -- checking a chart's live state any earlier would still
+     * see whatever was left over from the previous render. Pass
+     * chartElementId: null for anything that isn't a live Plotly chart
+     * right now (no data, or mobile's non-Plotly card-list views). */
+    function wireImageButton(btnId, chartElementId, filename) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (!chartElementId) {
+            btn.style.display = "none";
+            btn.onclick = null;
+            return;
+        }
+        btn.style.display = "";
+        btn.onclick = () => MASCharts.downloadChartImage(chartElementId, filename);
+    }
+
     function renderResponseDistribution() {
         const heading = document.getElementById("response-dist-heading");
         heading.textContent = `${state.year} Response Distribution`;
 
         const topline = MASData.getTopline(currentQuestionRecord().key, state.year);
         const container = document.getElementById("response-dist-container");
+        const baseFilename = `${MASCharts.slugify(currentQuestionRecord().key)}_${state.year}_topline`;
         wireDownloadButton("topline-download-btn", () => {
             if (!topline) return null;
             return {
-                filename: `${MASCharts.slugify(currentQuestionRecord().key)}_${state.year}_topline.csv`,
+                filename: `${baseFilename}.csv`,
                 headers: ["Response", "Percent"],
                 rows: topline.sort_order
                     .filter((r) => topline.percents[r] !== undefined)
@@ -139,15 +158,18 @@
         });
         if (!topline) {
             container.innerHTML = `<div class="loading-note">No data available for this question/year.</div>`;
+            wireImageButton("topline-download-img-btn", null);
             return;
         }
         const questionTitle = currentQuestionRecord().verb_by_year[state.year] || currentQuestionRecord().key;
 
         if (state.isMobile) {
             container.innerHTML = MASMobileViews.responseBarListHTML(topline.sort_order, topline.colors, topline.percents, questionTitle);
+            wireImageButton("topline-download-img-btn", null);
         } else {
             container.innerHTML = `<div id="topline-chart" class="chart-container"></div>`;
             MASCharts.buildToplineBarChart("topline-chart", topline.sort_order, topline.colors, topline.percents, questionTitle);
+            wireImageButton("topline-download-img-btn", "topline-chart", `${baseFilename}.png`);
         }
     }
 
@@ -155,23 +177,26 @@
         const q = currentQuestionRecord();
         const container = document.getElementById("trend-container");
         const trend = q.has_trend ? MASData.getMetroTrend(q.key) : null;
+        const baseFilename = `${MASCharts.slugify(q.key)}_trend`;
         wireDownloadButton("trend-download-btn", () => {
             if (!trend) return null;
             const years = Object.keys(trend.by_year).sort();
             return {
-                filename: `${MASCharts.slugify(q.key)}_trend.csv`,
+                filename: `${baseFilename}.csv`,
                 headers: ["Year", ...trend.sort_order],
                 rows: years.map((y) => [y, ...trend.sort_order.map((r) => (trend.by_year[y][r] !== undefined ? (trend.by_year[y][r] * 100).toFixed(0) : ""))]),
             };
         });
         if (!q.has_trend || !trend) {
             container.innerHTML = `<div class="info-box">There is no recent and viable year-over-year trend data for this question.</div>`;
+            wireImageButton("trend-download-img-btn", null);
             return;
         }
         container.innerHTML = `
             <div id="trend-chart" class="chart-container"></div>
             <div class="section-caption">Note: Remaining percentages are either Don't Know or Not Available.</div>
             <div class="section-caption">Note: This chart shows trends across ALL survey years, regardless of the year filter above.${state.isMobile ? "" : `<br>${LEGEND_HINT}`}</div>`;
+        wireImageButton("trend-download-img-btn", "trend-chart", `${baseFilename}.png`);
         MASCharts.buildTrendLineChart(
             "trend-chart",
             trend.sort_order,

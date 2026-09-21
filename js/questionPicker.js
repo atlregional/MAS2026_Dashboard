@@ -22,12 +22,19 @@ const MASQuestionPicker = (() => {
     // prefix baked into q.short, so this mapping lives here rather than
     // being computed). FALLBACK_CATEGORY_STYLE covers any category added
     // later that isn't in this list yet.
+    // ECONOMY/HOUSING/ENVIRONMENT's original colors (#B45309/#C2410C/
+    // #15803D) sat right at ~4.5:1 against their own badge backgrounds --
+    // technically at/just over the WCAG 2.2 SC 1.4.3 threshold (4.5:1) but
+    // too close to the line to trust across browsers/rendering. Each
+    // nudged a bit darker (same hue) to clear it with real margin
+    // (~4.6:1+); the rest already had comfortable margin and are
+    // unchanged.
     const CATEGORY_STYLES = {
         BIGPROBLEM: { emoji: "🎯", color: "#B91C1C", bg: "#FEE2E2" },
         AI: { emoji: "🤖", color: "#6D28D9", bg: "#EDE9FE" },
-        ECONOMY: { emoji: "💰", color: "#B45309", bg: "#FEF3C7" },
-        ENVIRONMENT: { emoji: "🌎", color: "#15803D", bg: "#DCFCE7" },
-        HOUSING: { emoji: "🏠", color: "#C2410C", bg: "#FFEDD5" },
+        ECONOMY: { emoji: "💰", color: "#b25209", bg: "#FEF3C7" },
+        ENVIRONMENT: { emoji: "🌎", color: "#157f3d", bg: "#DCFCE7" },
+        HOUSING: { emoji: "🏠", color: "#c0400c", bg: "#FFEDD5" },
         "QUALITY OF LIFE": { emoji: "⭐", color: "#0369A1", bg: "#E0F2FE" },
         TRANSPORTATION: { emoji: "🚗", color: "#1D4ED8", bg: "#DBEAFE" },
         WORKFORCE: { emoji: "💼", color: "#0F766E", bg: "#CCFBF1" },
