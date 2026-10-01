@@ -1,13 +1,6 @@
-"""Config (config/*.yaml) loading and chart resolution.
-
-Ported from MAS_Dashboard_App/lib/chart_config.py (+ fallback_color_map /
-FALLBACK_PALETTE from lib/charts.py / lib/constants.py), for use by
-scripts/build_static_data.py -- a build-time-only tool, so every
-@st.cache_data decorator and the streamlit import are dropped (no Streamlit
-here; each function just runs once per invocation anyway). CONFIG_DIR is
-repointed at this repo's own config/ (a verbatim copy of MAS_Dashboard_App's,
-kept here so this repo has no runtime or build-time dependency on
-MAS_Dashboard_App at all). Every other line of logic is unchanged.
+"""Loads config/*.yaml and turns weighted sums into chart-ready data:
+percentages, hidden responses, labels, sort order and colors. Used by
+scripts/build_static_data.py.
 """
 
 from dataclasses import dataclass
@@ -20,10 +13,9 @@ CONFIG_DIR = Path(__file__).resolve().parent.parent.parent / "config"
 DEFAULT_CHART_CONFIGS_PATH = CONFIG_DIR / "chart_configs.yaml"
 DEFAULT_QUESTIONS_PATH = CONFIG_DIR / "questions.yaml"
 DEFAULT_DEMOGRAPHICS_PATH = CONFIG_DIR / "demographics.yaml"
+DEFAULT_DASHBOARD_PATH = CONFIG_DIR / "dashboard.yaml"
 
-# Used only when a question/year has no custom_colors entry in
-# chart_configs.yaml (rare -- almost every MAS question already has
-# hand-picked colors).
+# Used when a question/year has no custom_colors in chart_configs.yaml.
 FALLBACK_PALETTE = [
     "#2a78d6",
     "#eb6834",
@@ -72,6 +64,11 @@ def load_questions_config(path: Path | str = DEFAULT_QUESTIONS_PATH) -> dict:
 
 
 def load_demographics_config(path: Path | str = DEFAULT_DEMOGRAPHICS_PATH) -> dict:
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+def load_dashboard_config(path: Path | str = DEFAULT_DASHBOARD_PATH) -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
 
@@ -211,9 +208,8 @@ def resolve_demographic_grouping(
         data["demo_order"] = data[demo_column].map(order_map)
         data = data.sort_values("demo_order")
         full_sort_order = [rename_map.get(grp, grp) if rename_map else grp for grp in order]
-        # Filter the fixed cross-year order down to only the values
-        # actually present in THIS (question, year) slice -- an absent
-        # jurisdiction shouldn't reserve an empty labeled axis slot.
+        # Keep only groups present in this slice, so missing groups don't
+        # leave empty rows.
         present = set(data[display_col].unique())
         demo_sort_order = [label for label in full_sort_order if label in present]
     else:

@@ -1,33 +1,17 @@
 #!/usr/bin/env python3
-"""Precomputes every real (question, year[, demographic]) view's fully-
-resolved chart data into one static JSON file for the hand-written JS static
-build to read at runtime -- no Python/pandas at runtime, just lookup + render.
+"""Builds data/dashboard_data.json, the only data file the dashboard reads.
 
-This build-time-only tool has NO dependency on MAS_Dashboard_App. It reads
-two build-time inputs instead:
+Inputs:
+  - data/pipeline_input/crosstab_long_<survey_year>.parquet and
+    questions_meta_<survey_year>.parquet (survey_year from config/dashboard.yaml),
+    copied from MAS_Pipeline (see README). Weighted sums per question, year,
+    demographic group and response, with every response included.
+  - config/chart_configs.yaml, questions.yaml and demographics.yaml, which
+    control percentages, hidden responses, labels, sort order and colors.
 
-  1. data/pipeline_input/{crosstab_long,questions_meta}.parquet -- produced by
-     MAS_Pipeline/main_crosstab.py (copy them here by hand after running that
-     script, same "regenerate by hand when it changes" pattern as everything
-     else in this workspace). Pure weighted survey facts: every response
-     category (DK included, nothing excluded), correctly weighted
-     (metrowt/countywt/atlwt already resolved -- this script never needs to
-     know which weight column was used). MAS_Pipeline deliberately has zero
-     knowledge of chart_configs.yaml/questions.yaml/demographics.yaml -- all
-     presentation decisions (sort order, colors, aliases, which responses to
-     hide) are this repo's own, applied below.
-  2. config/{chart_configs,questions,demographics}.yaml -- verbatim copies of
-     MAS_Dashboard_App/config/*.yaml (that remains their source of truth;
-     re-copy here if they change).
-
-scripts/lib/chart_config.py (a port of MAS_Dashboard_App/lib/chart_config.py)
-does the actual percent/exclude/alias/order/color resolution -- unchanged
-logic, just fed from the crosstab file instead of live grouped DataFrames.
-
-Mirrors metro_summary.py's and demographic_breakdown.py's own control flow
-closely (same guards, same edge cases) rather than re-deriving the logic
-independently, to minimize the chance of silently diverging from
-already-verified behavior.
+Every chart the pages can show is computed here, so the browser only looks
+values up. The percent/exclude/alias/sort/color logic is in
+scripts/lib/chart_config.py.
 """
 
 import json
@@ -38,8 +22,10 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.chart_config import (  # noqa: E402
+    ResolvedChartData,
     fallback_color_map,
     load_chart_configs,
+    load_dashboard_config,
     load_demographics_config,
     load_questions_config,
     resolve_chart_config,
@@ -52,9 +38,8 @@ OUT_PATH = REPO_ROOT / "data" / "dashboard_data.json"
 
 
 def resolved_to_dict(resolved, percent_col="percent", response_col="response_display"):
-    """(sort_order, colors) from a ResolvedChartData -- colors always
-    resolved (fallback_color_map applied when color_map is None), matching
-    every renderer in the server app (`color_map or fallback_color_map(...)`)."""
+    """(sort_order, colors) from a ResolvedChartData, using fallback colors
+    when the config sets none."""
     colors = resolved.color_map or fallback_color_map(resolved.sort_order)
     return resolved.sort_order, {k: colors.get(k, "#999999") for k in resolved.sort_order}
 
@@ -72,35 +57,79 @@ def by_year_dict(resolved_data, percent_col="percent"):
     return out
 
 
+def trend_settings(hist_entry):
+    """(has_trend, start_year, trend_responses) from one config/questions.yaml
+    question_hist entry -- either a plain 0/1 flag, or a mapping like
+    {trend: 1, start_year: 2025, trend_responses: [...]}. start_year limits the
+    trend line charts to start_year onward (the bar charts still offer every
+    year); trend_responses limits the trend lines to those responses."""
+    if isinstance(hist_entry, dict):
+        return hist_entry.get("trend", 0) == 1, hist_entry.get("start_year"), hist_entry.get("trend_responses")
+    return hist_entry == 1, None, None
+
+
+def limit_trend_responses(resolved, trend_responses):
+    """Keeps only the trend_responses lines in a trend chart's resolved data.
+    Each entry can be the raw response or its display alias. Percentages are
+    unchanged (still out of all responses); the other lines just aren't drawn."""
+    if not trend_responses:
+        return resolved
+    keep = set(trend_responses)
+    data = resolved.data[resolved.data["response"].isin(keep) | resolved.data["response_display"].isin(keep)]
+    shown = set(data["response_display"])
+    return ResolvedChartData(
+        data=data,
+        sort_order=[r for r in resolved.sort_order if r in shown],
+        color_map=resolved.color_map,
+    )
+
+
 def main():
-    crosstab = pd.read_parquet(PIPELINE_INPUT_DIR / "crosstab_long.parquet")
-    meta = pd.read_parquet(PIPELINE_INPUT_DIR / "questions_meta.parquet")
+    survey_year = int(load_dashboard_config()["survey_year"])
+    crosstab = pd.read_parquet(PIPELINE_INPUT_DIR / f"crosstab_long_{survey_year}.parquet")
+    meta = pd.read_parquet(PIPELINE_INPUT_DIR / f"questions_meta_{survey_year}.parquet")
 
     chart_configs = load_chart_configs()
     questions_cfg = load_questions_config()
-    question_map = questions_cfg["question_map"]
     question_hist = questions_cfg["question_hist"]
     demographics_cfg = load_demographics_config()
     demo_col_map = demographics_cfg["demo_col_map"]
     excluded_demographics = demographics_cfg["excluded_demographics"]
     demo_grp_order = demographics_cfg["demo_grp_order"]
     demo_grp_rename = demographics_cfg["demo_grp_rename"]
+    # groups shown in bar charts but given no historic trend chart (the page
+    # makes a group without a trend unselectable)
+    excluded_historical = demographics_cfg.get("excluded_historical") or {}
 
-    # The trend/historical charts always use *this* year's config across
-    # every year of data (see resolve_chart_config's docstring) -- a single
-    # global year, matching MAS_Dashboard_App/lib/constants.CURRENT_SURVEY_YEAR,
-    # not each question's own max year (which happens to be the same today,
-    # since main_dshbrd.py's filter_to_target_year already keeps only
-    # questions asked in the current year, but isn't guaranteed to stay that
-    # way and shouldn't be relied on implicitly).
+    # Trend charts apply the current survey year's chart config to every year.
     current_survey_year = max(int(y) for y in meta["year"].unique())
+    if current_survey_year != survey_year:
+        print(f"  warning: questions_meta_{survey_year}.parquet's latest year is {current_survey_year}, not {survey_year}")
 
-    # Question display order: BIGPROBLEM first, then alphabetical -- exactly
-    # matching both page scripts' own ordering.
-    q_shorts = meta["q_short"].unique().tolist()
-    bigprob_q = [q for q in q_shorts if "BIGPROBLEM" in q]
-    other_q = [q for q in q_shorts if "BIGPROBLEM" not in q]
-    q_shorts_ordered = bigprob_q + sorted(other_q)
+    # Category and short text per question code.
+    question_defs = (
+        meta.drop_duplicates("question")
+        .set_index("question")[["category", "q_short"]]
+        .to_dict("index")
+    )
+
+    # Question display order: questions listed in questions.yaml's question_order
+    # come first, in that order. Any others follow: BIGPROBLEM first, then by
+    # category, then by text.
+    questions_ordered = sorted(
+        question_defs,
+        key=lambda code: (
+            question_defs[code]["category"] != "BIGPROBLEM",
+            question_defs[code]["category"],
+            question_defs[code]["q_short"],
+        ),
+    )
+    question_order = questions_cfg.get("question_order") or []
+    for code in question_order:
+        if code not in question_defs:
+            print(f"  warning: question_order lists {code}, which isn't in questions_meta_{survey_year}.parquet")
+    listed = [code for code in question_order if code in question_defs]
+    questions_ordered = listed + [code for code in questions_ordered if code not in listed]
 
     questions_out = []
     topline_out = {}
@@ -108,13 +137,15 @@ def main():
     crosstab_out = {}
     historical_out = {}
 
-    demographics_out = [{"name": name, "column": col} for name, col in demo_col_map.items()]
+    # demo_notes: extra caption text shown under a demographic's bar chart
+    demo_notes = demographics_cfg.get("demo_notes") or {}
+    demographics_out = [{"name": name, "column": col, "note": demo_notes.get(name)} for name, col in demo_col_map.items()]
 
     total_topline = total_trend = total_crosstab = total_hist = 0
 
-    for q_short in q_shorts_ordered:
-        question = question_map[q_short]
-        has_trend = question_hist.get(question, 0) == 1
+    for question in questions_ordered:
+        question_def = question_defs[question]
+        has_trend, trend_start_year, trend_responses = trend_settings(question_hist.get(question, 0))
         meta_question = meta[meta["question"] == question]
         years = sorted(int(y) for y in meta_question["year"].unique())
         end_date = f"{max(years)}-12-31" if years else None
@@ -128,15 +159,23 @@ def main():
         questions_out.append(
             {
                 "key": question,
-                "short": q_short,
-                "display": f"{q_short} {'(Trend Available)' if has_trend else '(No Trend)'}",
+                "category": question_def["category"],
+                "text": question_def["q_short"],
                 "has_trend": has_trend,
+                "trend_start_year": trend_start_year,
                 "years": years,
                 "verb_by_year": verb_by_year,
             }
         )
 
         question_crosstab = crosstab[crosstab["question"] == question]
+        # Only the trend line charts (metro trend + demographic historical)
+        # are limited by start_year; topline/crosstab bars use every year.
+        trend_crosstab = question_crosstab
+        if trend_start_year is not None:
+            trend_crosstab = question_crosstab[question_crosstab["year"] >= trend_start_year]
+            if has_trend and trend_crosstab["year"].nunique() < 2:
+                print(f"  warning: {question}'s trend starts at {trend_start_year}, leaving fewer than 2 years to plot")
 
         # --- Topline (Metro Summary Response Distribution) ---
         for year in years:
@@ -157,12 +196,15 @@ def main():
 
         # --- Metro-wide Year-over-Year Trend (only if flagged) ---
         if has_trend:
-            grouped_trend = question_crosstab[question_crosstab["demo_type"] == "metroresp"]
+            grouped_trend = trend_crosstab[trend_crosstab["demo_type"] == "metroresp"]
             if len(grouped_trend) > 0:
                 trend_config = question_config.get(str(current_survey_year), {})
                 resolved_trend = resolve_chart_config(
                     grouped_trend, trend_config, value_col="weight", group_cols=["year"], default_sort="alpha"
                 )
+                resolved_trend = limit_trend_responses(resolved_trend, trend_responses)
+                if trend_responses and not resolved_trend.sort_order:
+                    print(f"  warning: none of {question}'s trend_responses match its responses")
                 sort_order, colors = resolved_to_dict(resolved_trend)
                 metro_trend_out[question] = {
                     "sort_order": sort_order,
@@ -173,9 +215,8 @@ def main():
                 total_trend += 1
 
         # --- Demographic crosstabs + historical trends ---
-        # Every (demo_value) ever seen for this question, per demographic
-        # type, across all its years -- historical trend is computed once
-        # per (question, demo_type, demo_value), not per year.
+        # Demographic groups seen in any year, collected for the historical
+        # trends (one per question and group, not per year).
         demo_values_seen: dict[str, set[str]] = {name: set() for name in demo_col_map}
 
         for year in years:
@@ -203,7 +244,13 @@ def main():
                 subtitle = f"Response by {selected_demographic} Demographic ({year})"
 
                 groups_present = list(demo_data[demo_display_col].unique())
-                ordered_groups = [g for g in (demo_sort_order or sorted(groups_present)) if g in groups_present]
+                # demo_sort_order is None only when demographics.yaml has no order for this demographic;
+                # an empty list means none of the configured groups are present (ex. Homeownership in
+                # 2016/2017, which wasn't asked, so every value is NA). Skip the chart in that case so
+                # the page shows "data not available" instead of an NA-only chart.
+                ordered_groups = [g for g in (demo_sort_order if demo_sort_order is not None else sorted(groups_present)) if g in groups_present]
+                if not ordered_groups:
+                    continue
 
                 groups_json = []
                 for group_display in ordered_groups:
@@ -231,8 +278,10 @@ def main():
         if has_trend:
             for selected_demographic, demo_column in demo_col_map.items():
                 for demo_value in sorted(demo_values_seen[selected_demographic]):
-                    grouped_hist = question_crosstab[
-                        (question_crosstab["demo_type"] == demo_column) & (question_crosstab["demo_value"] == demo_value)
+                    if demo_value in (excluded_historical.get(selected_demographic) or []):
+                        continue
+                    grouped_hist = trend_crosstab[
+                        (trend_crosstab["demo_type"] == demo_column) & (trend_crosstab["demo_value"] == demo_value)
                     ]
                     if len(grouped_hist) == 0:
                         continue
@@ -240,6 +289,7 @@ def main():
                     resolved_hist = resolve_chart_config(
                         grouped_hist, hist_config, value_col="weight", group_cols=["year"], default_sort="alpha"
                     )
+                    resolved_hist = limit_trend_responses(resolved_hist, trend_responses)
                     sort_order, colors = resolved_to_dict(resolved_hist)
                     historical_out[f"{question}|{selected_demographic}|{demo_value}"] = {
                         "sort_order": sort_order,

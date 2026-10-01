@@ -9,7 +9,6 @@ demo_col_map:
   Income: income
   Homeownership: homeownership
   Employment: employment status
-  Work Setting: remote worker status
 excluded_demographics:
   Hispanic:
   - DK
@@ -17,6 +16,7 @@ excluded_demographics:
   - Identified with gender in different way
   - DK
   Education:
+  - Less than high school
   - DK
   Income:
   - DK
@@ -24,15 +24,27 @@ excluded_demographics:
   - DK
   Employment:
   - Disabled
-  - DK
-  Work Setting:
+  - Student full-time
   - DK
   Race:
   - DK
+# Groups still shown in the bar charts but with no historic trend line chart
+# (raw group values, before demo_grp_rename). Race: multiracial is only its
+# own group from 2026 (before that it's counted in other), so neither has a
+# consistent trend.
+excluded_historical:
+  Race:
+  - multiracial
+  - other
+# Extra sentence added to the end of the note under a demographic's bar chart
+# (all years), keyed by the demo_col_map label.
+demo_notes:
+  Race: "In 2025 and earlier, the Other group includes Multiracial respondents. Starting in 2026, Multiracial is broken out of the Other group."
 demo_grp_order:
   Race:
   - black
   - white
+  - multiracial
   - other
   Hispanic:
   - 'Yes'
@@ -89,10 +101,6 @@ demo_grp_order:
   Homeownership:
   - Own or lives with owner
   - Rents or lives with renter
-  Work Setting:
-  - Work remotely all of the time
-  - Work remotely some of the time and from a place of business
-  - work at a place of business all the time
 demo_grp_rename:
   Jurisdiction:
     Atlanta: City of Atlanta
@@ -113,6 +121,7 @@ demo_grp_rename:
   Race:
     black: Black
     white: White
+    multiracial: Multiracial
     other: Other
   Age:
     18-34: 18-34 yrs
@@ -138,7 +147,3 @@ demo_grp_rename:
     Unemployed but seeking work: Unemployed (seeking)
     Unemployed and not looking for work: Unemployed (not seeking)
     Retired: Retired
-  Work Setting:
-    Work remotely all of the time: Remote All of Time
-    Work remotely some of the time and from a place of business: Hybrid
-    work at a place of business all the time: Fully In-Person

@@ -1,0 +1,5 @@
+# The survey year this dashboard is for. Picks which MAS_Pipeline exports in
+# data/pipeline_input/ to read (crosstab_long_<survey_year>.parquet and
+# questions_meta_<survey_year>.parquet), so it must match update_yr in
+# MAS_Pipeline/config.yaml.
+survey_year: 2026

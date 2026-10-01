@@ -1,38 +1,22 @@
 /**
- * questionPicker.js -- a custom (non-native) dropdown for choosing a
- * question on desktop, replacing the native <select> that used to render
- * each question as one flat string ("BIGPROBLEM| What is the biggest
- * problem in metro Atlanta today? (No Trend)"). A native <select>'s
- * <option> elements cannot have per-substring styling -- no color, no
- * italics, nothing -- in any browser, so getting a colored category
- * badge, a styled trend label, and column alignment across every row
- * requires building the list ourselves instead. The mobile question
- * picker is unaffected -- see mobileViews.js's own, simpler
- * <details>-based list.
+ * questionPicker.js -- custom question dropdown for desktop. A native
+ * <select> can't style parts of an option, so this builds its own list to
+ * show a colored category badge, the question, and a trend label.
  *
- * Every row (including the closed button showing the current selection)
- * shares one 3-column CSS grid (category badge | question | trend label)
- * so all three start at the same x position on every option, not just
- * within the open list but in the closed button too.
+ * Every row, including the closed button, uses the same 3-column grid
+ * (category | question | trend) so the columns line up. The mobile picker
+ * is in mobileViews.js.
  */
 
 const MASQuestionPicker = (() => {
-    // Hand-picked emoji + color per question category (config/questions
-    // isn't categorized in the data file beyond the "CATEGORY| question"
-    // prefix baked into q.short, so this mapping lives here rather than
-    // being computed). FALLBACK_CATEGORY_STYLE covers any category added
-    // later that isn't in this list yet.
-    // ECONOMY/HOUSING/ENVIRONMENT's original colors (#B45309/#C2410C/
-    // #15803D) sat right at ~4.5:1 against their own badge backgrounds --
-    // technically at/just over the WCAG 2.2 SC 1.4.3 threshold (4.5:1) but
-    // too close to the line to trust across browsers/rendering. Each
-    // nudged a bit darker (same hue) to clear it with real margin
-    // (~4.6:1+); the rest already had comfortable margin and are
-    // unchanged.
+    // Badge emoji and colors per question category. Each text color meets
+    // WCAG 4.5:1 contrast against its background. Categories not listed
+    // here use FALLBACK_CATEGORY_STYLE.
     const CATEGORY_STYLES = {
         BIGPROBLEM: { emoji: "🎯", color: "#B91C1C", bg: "#FEE2E2" },
         AI: { emoji: "🤖", color: "#6D28D9", bg: "#EDE9FE" },
         ECONOMY: { emoji: "💰", color: "#b25209", bg: "#FEF3C7" },
+        "ECONOMIC MOBILITY": { emoji: "📈", color: "#047857", bg: "#D1FAE5" },
         ENVIRONMENT: { emoji: "🌎", color: "#157f3d", bg: "#DCFCE7" },
         HOUSING: { emoji: "🏠", color: "#c0400c", bg: "#FFEDD5" },
         "QUALITY OF LIFE": { emoji: "⭐", color: "#0369A1", bg: "#E0F2FE" },
@@ -47,24 +31,14 @@ const MASQuestionPicker = (() => {
         return div.innerHTML;
     }
 
-    /** q.short is "CATEGORY| question text" (no trend label) -- split on
-     * the first "|" rather than trusting a fixed offset. */
-    function splitShort(short) {
-        const idx = short.indexOf("|");
-        if (idx === -1) return { category: "", question: short.trim() };
-        return { category: short.slice(0, idx).trim(), question: short.slice(idx + 1).trim() };
-    }
-
-    /** The 3-column row content shared by the closed button and every
-     * option in the open panel. */
+    /** Row content (category | question | trend) for the button and each option. */
     function rowHTML(q) {
-        const { category, question } = splitShort(q.short);
-        const style = CATEGORY_STYLES[category] || FALLBACK_CATEGORY_STYLE;
+        const style = CATEGORY_STYLES[q.category] || FALLBACK_CATEGORY_STYLE;
         const trendClass = q.has_trend ? "qpicker-trend--available" : "qpicker-trend--none";
         const trendText = q.has_trend ? "Trend Available" : "No Trend";
         return `
-            <span class="qpicker-category" style="color:${style.color};background:${style.bg}">${style.emoji} ${escapeHtml(category)}</span>
-            <span class="qpicker-question">${escapeHtml(question)}</span>
+            <span class="qpicker-category" style="color:${style.color};background:${style.bg}">${style.emoji} ${escapeHtml(q.category)}</span>
+            <span class="qpicker-question">${escapeHtml(q.text)}</span>
             <span class="qpicker-trend ${trendClass}">${trendText}</span>`;
     }
 
@@ -86,13 +60,9 @@ const MASQuestionPicker = (() => {
         if (refocusButton) btn.focus();
     }
 
-    /** Delegated listeners attached once per container (guarded by a
-     * dataset flag) -- render() is called again on every selection change
-     * and rebuilds the button/panel DOM each time, so listeners attached
-     * directly to those elements would need re-binding (and re-removing)
-     * on every render. Delegating from the persistent container, and
-     * reading the latest onSelect callback off container._qpOnSelect
-     * (refreshed every render), avoids that entirely. */
+    /** Attaches event listeners to the container once. render() rebuilds the
+     * inner DOM on every selection, so listeners are delegated from the
+     * container and read the current callback from container._qpOnSelect. */
     function bindOnce(container) {
         if (container.dataset.qpickerBound) return;
         container.dataset.qpickerBound = "1";
@@ -107,7 +77,7 @@ const MASQuestionPicker = (() => {
             const optBtn = e.target.closest(".qpicker__option");
             if (optBtn) {
                 closePanel(container, { refocusButton: true });
-                container._qpOnSelect(optBtn.dataset.display);
+                container._qpOnSelect(optBtn.dataset.key);
             }
         });
 
@@ -136,14 +106,14 @@ const MASQuestionPicker = (() => {
     /**
      * @param {HTMLElement} container
      * @param {Array} questions -- MASData.getQuestions() records
-     * @param {string} currentDisplay -- q.display of the selected question
-     * @param {(display:string)=>void} onSelect
+     * @param {string} currentKey -- q.key of the selected question
+     * @param {(key:string)=>void} onSelect
      * @param {string} buttonId -- id put on the button, so a <label for>
      *        elsewhere on the page can target it
      */
-    function render(container, questions, currentDisplay, onSelect, buttonId) {
+    function render(container, questions, currentKey, onSelect, buttonId) {
         container._qpOnSelect = onSelect;
-        const current = questions.find((q) => q.display === currentDisplay) || questions[0];
+        const current = questions.find((q) => q.key === currentKey) || questions[0];
 
         container.innerHTML = `
             <button type="button" id="${buttonId}" class="qpicker__button" aria-haspopup="listbox" aria-expanded="false">
@@ -153,8 +123,8 @@ const MASQuestionPicker = (() => {
             <div class="qpicker__panel" role="listbox" hidden>
                 ${questions
                     .map((q) => {
-                        const selected = q.display === currentDisplay;
-                        return `<button type="button" class="qpicker__option${selected ? " selected" : ""}" role="option" aria-selected="${selected}" data-display="${escapeHtml(q.display)}">${rowHTML(q)}</button>`;
+                        const selected = q.key === currentKey;
+                        return `<button type="button" class="qpicker__option${selected ? " selected" : ""}" role="option" aria-selected="${selected}" data-key="${escapeHtml(q.key)}">${rowHTML(q)}</button>`;
                     })
                     .join("")}
             </div>`;
@@ -164,12 +134,7 @@ const MASQuestionPicker = (() => {
 
     return {
         render,
-        // Exposed so mobileViews.js's question picker can reuse the same
-        // category badge colors/emoji and category/question split instead
-        // of duplicating that map -- it renders the pieces stacked
-        // (one per line) rather than in this file's 3-column grid, since
-        // fixed-width columns don't fit a phone-width screen.
-        splitShort,
+        // Shared with the mobile question picker in mobileViews.js.
         categoryStyle: (category) => CATEGORY_STYLES[category] || FALLBACK_CATEGORY_STYLE,
     };
 })();

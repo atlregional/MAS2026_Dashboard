@@ -1,28 +1,12 @@
 /**
- * demographicBreakdown.js -- page orchestration for the Demographic
- * Breakdown page. Mirrors MAS_Dashboard_App/demographic_breakdown.py's
- * control flow: question picker -> year radio + Topline/Detailed pill ->
- * demographic segmented control -> stacked bar (desktop, click-to-drill)
- * / card list (mobile) -> historical trend.
+ * demographicBreakdown.js -- controller for the Demographic Breakdown page:
+ * question picker, year buttons, Topline/Detailed toggle, demographic
+ * selector, the crosstab chart (stacked bars or small multiples on desktop,
+ * cards on mobile), and the selected group's historical trend.
  *
- * Selected-demo-value persistence: SharedState.getSelectedDemoValue(
- * demoColumn) is read fresh on every render rather than kept in local
- * `state`, mirroring get_clicked_demo_value()'s own contract in the
- * server app (it re-reads the persisted widget selection every rerun,
- * rather than the app tracking a separate copy) -- keyed by demographic
- * *column*, so a selection survives a question change (still a valid
- * value for the same demographic type) but resets when the demographic
- * type itself changes.
- *
- * One deliberate, minor difference from the server app, documented here
- * rather than silently ported: the server app used two independent
- * selection keys for the same concept (the desktop Plotly widget's own
- * internal state vs. mobile's separate `mobile_selected_demo_value__*`
- * session-state key), so a selection made on desktop didn't show as
- * selected after toggling to mobile mid-session, and vice versa -- an
- * artifact of two different naming schemes, not a deliberate design
- * choice. This build uses one shared key (SharedState.getSelectedDemoValue)
- * for both, so a selection survives toggling the mobile/desktop view.
+ * The selected demographic group is read from SharedState on every render
+ * rather than kept in `state`. It is stored per demographic column, so it
+ * survives a question change but resets when the demographic type changes.
  */
 
 (function () {
@@ -35,10 +19,7 @@
     };
 
     const CROSSTAB_NOTE = "Note: Remaining percentages are either Don't Know or Not Available. Percentages may vary slightly from those reported in other MAS products, go to FAQ for more details.";
-    // Only the stacked view has a legend (small multiples uses per-panel
-    // column headers instead) -- shown as a second line under the note
-    // above so the legend's own click/double-click behavior isn't
-    // something a user has to already know Plotly supports.
+    // Shown under the note for the stacked view only; small multiples has no legend.
     const LEGEND_HINT = "Tip: Click a legend entry to hide that response; double-click one to isolate it.";
 
     function validateYear(year, yearOptions) {
@@ -46,7 +27,7 @@
     }
 
     function currentQuestionRecord() {
-        return MASData.getQuestions().find((q) => q.display === state.question);
+        return MASData.getQuestions().find((q) => q.key === state.question);
     }
 
     function yearOptionsFor(questionRecord) {
@@ -75,22 +56,20 @@
             MASMobileViews.renderQuestionPicker(container, questions, state.question, onQuestionChange);
             return;
         }
-        // See metroSummary.js's identical comment: the wrapper is built
-        // once so the picker element's own listeners (bound once, see
-        // questionPicker.js) aren't re-attached on every question change.
+        // Build the label and wrapper once; later calls re-render only the picker.
         let pickerEl = document.getElementById("demo-question-picker");
         if (!pickerEl) {
             container.innerHTML = `
-                <label class="field-label" for="demo-question-btn">Choose a question from the MAS 2025 Survey<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</span></span></label>
+                <label class="field-label" for="demo-question-btn">Choose a question from the MAS 2026 Survey<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</span></span></label>
                 <div id="demo-question-picker" class="qpicker"></div>`;
             pickerEl = document.getElementById("demo-question-picker");
         }
         MASQuestionPicker.render(pickerEl, questions, state.question, onQuestionChange, "demo-question-btn");
     }
 
-    function onQuestionChange(newDisplay) {
-        state.question = newDisplay;
-        SharedState.setSharedQuestion(newDisplay);
+    function onQuestionChange(newKey) {
+        state.question = newKey;
+        SharedState.setSharedQuestion(newKey);
         const q = currentQuestionRecord();
         const yearOptions = yearOptionsFor(q);
         state.year = validateYear(state.year, yearOptions);
@@ -132,12 +111,8 @@
         });
     }
 
-    /** Desktop shows this as a dropdown sitting in the controls row
-     * (between the year and summary-type selectors); mobile keeps the
-     * original pill row, in its own spot below that row -- two separate
-     * elements, one shown and one hidden via display:none based on
-     * state.isMobile, same split as renderChartViewToggle() elsewhere in
-     * this file. */
+    /** Demographic selector: a dropdown in the controls row on desktop, a row
+     * of pill buttons on mobile. Both exist in the HTML; one is hidden. */
     function renderDemographicSelector() {
         const demographics = MASData.getDemographics();
         const desktopWrap = document.getElementById("demo-select-wrap");
@@ -163,9 +138,7 @@
             select.innerHTML = demographics
                 .map((d) => `<option value="${escapeHtml(d.name)}"${d.name === state.demographic ? " selected" : ""}>${escapeHtml(d.name)}</option>`)
                 .join("");
-            // A plain property assignment (not addEventListener) so
-            // re-calling this on every render replaces the old handler
-            // instead of piling up a new one each time.
+            // .onchange so each render replaces the previous handler.
             select.onchange = () => onDemographicChange(select.value);
         }
     }
@@ -177,37 +150,22 @@
         renderCrosstabSection();
     }
 
-    /** Stacked-vs-small-multiples view toggle -- desktop only (mobile
-     * already has its own card-list layout, unaffected by this). Both
-     * views are built from the exact same crosstab data, just laid out
-     * differently, and share the same click-to-drill selection callback
-     * in renderCrosstabSection() below, so switching views never disturbs
-     * a current selection. */
+    /** Stacked / Small Multiples toggle (desktop only). Both views use the
+     * same data and selection, so switching keeps the selected group. */
     function renderChartViewToggle() {
         const container = document.getElementById("chart-view-toggle");
         if (state.isMobile) {
             container.innerHTML = "";
             return;
         }
-        // Built once; every later call (a toggle click, or just re-rendering
-        // because the year/demographic changed) only updates .selected and
-        // repositions the thumb below, rather than recreating the buttons.
-        // The thumb has to be the *same* DOM node across renders for its
-        // left/width CSS transition to have a "from" position to slide
-        // from -- a freshly-recreated element has no prior state, so it'd
-        // just snap into place instead of sliding.
+        // Built once, then only updated, so the thumb element persists and
+        // its CSS transition can slide rather than snap.
         if (!container.querySelector(".chart-view-toggle__thumb")) {
             container.innerHTML = `
                 <span class="chart-view-toggle__thumb"></span>
                 <button type="button" data-view="stacked">Stacked</button>
                 <button type="button" data-view="small-multiples">Small Multiples</button>`;
-            // One listener on the whole track, not on each button, so
-            // clicking anywhere in the switch -- its padding, the currently
-            // selected label, the unselected one -- toggles it, like a real
-            // switch rather than two separate hit targets. switchChartView
-            // is a stable top-level function reference, so this is safe to
-            // re-run on every render: addEventListener no-ops on a duplicate
-            // (same function, same event, same target).
+            // Clicking anywhere on the track toggles the view.
             container.addEventListener("click", switchChartView);
         }
         container.querySelectorAll("button").forEach((btn) => {
@@ -224,11 +182,9 @@
         thumb.style.left = `${selected.offsetLeft}px`;
     }
 
-    /** Toggle-track click handler. Flips chartView and re-renders the
-     * toggle immediately (so the thumb starts sliding right on click,
-     * independent of the chart swap below), then separately fades the
-     * chart out, rebuilds it in the new view, and fades it back in --
-     * see the #crosstab-container.chart-transition-* rules in style.css. */
+    /** Flips the chart view: moves the toggle immediately, then fades the
+     * chart out, rebuilds it, and fades it back in (see the
+     * .chart-transition-* rules in style.css). */
     function switchChartView() {
         state.chartView = state.chartView === "stacked" ? "small-multiples" : "stacked";
         renderChartViewToggle();
@@ -246,17 +202,14 @@
             if (!el) return;
             el.classList.remove("chart-transition-exit");
             el.classList.add("chart-transition-enter");
-            void el.offsetWidth; // force layout so the "enter" starting state actually paints before it's removed below
+            void el.offsetWidth; // force a layout so the "enter" state paints before it's removed
             requestAnimationFrame(() => el.classList.remove("chart-transition-enter"));
         }, 180);
     }
 
-    /** Wires (or hides) a "Download CSV" button. buildExport() returns
-     * null when there's nothing valid to export right now -- the button
-     * hides rather than downloading a stale file left over from whatever
-     * was last successfully rendered. Re-run on every render, so .onclick
-     * (a plain property, not addEventListener) always reflects the
-     * current data rather than piling up old listeners. */
+    /** Shows a "Download CSV" button wired to the current data, or hides it
+     * when buildExport() returns null. Uses .onclick so each render replaces
+     * the previous handler instead of adding another. */
     function wireDownloadButton(btnId, buildExport) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
@@ -270,10 +223,8 @@
         btn.onclick = () => MASCharts.downloadCSV(exportData.filename, exportData.headers, exportData.rows);
     }
 
-    /** Wires (or hides) a "Download Image" button -- see metroSummary.js's
-     * identical helper for the full explanation. Pass chartElementId: null
-     * for anything that isn't a live Plotly chart right now (no data, or
-     * mobile's non-Plotly card-list view). */
+    /** Shows a "Download Image" button for a Plotly chart, or hides it when
+     * chartElementId is null (no data, or a mobile view with no Plotly chart). */
     function wireImageButton(btnId, chartElementId, filename) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
@@ -297,16 +248,10 @@
         const historicalCard = document.getElementById("historical-card");
         const historicalContainer = document.getElementById("historical-container");
 
-        // Rebuilding the Plotly chart(s) below (innerHTML + Plotly.newPlot)
-        // can make the browser jump the page back toward the top on
-        // desktop -- reported when selecting a bar (which also reveals the
-        // historical chart below) or switching stacked/small-multiples.
-        // Pin the scroll position back to wherever the user actually was,
-        // both right after this render and on the next frame, in case the
-        // jump happens slightly later (e.g. via Plotly's own responsive
-        // resize handling). Desktop only -- mobile's own card-list view has
-        // its own deliberate scroll-to-top elsewhere (picking a new
-        // question), which this must not interfere with.
+        // Rebuilding the charts can make the page jump toward the top on
+        // desktop. Restore the scroll position after rendering and again on
+        // the next frame. Skipped on mobile, which scrolls to the top on
+        // purpose when a new question is picked.
         const scrollY = state.isMobile ? null : window.scrollY;
         const restoreScroll = () => {
             if (scrollY != null && window.scrollY !== scrollY) window.scrollTo(0, scrollY);
@@ -333,9 +278,8 @@
         });
 
         if (!crosstab) {
-            // Same distinction the server app makes: does this (question, year)
-            // have ANY data at all (topline would exist), or just not for this
-            // particular demographic?
+            // Distinguish "no data for this question/year" from "no data for
+            // this demographic".
             const hasAnyData = MASData.getTopline(q.key, state.year) != null;
             chartContainer.innerHTML = hasAnyData
                 ? `<div class="warning-box">${escapeHtml(state.demographic)} data not available for this question.</div>`
@@ -346,22 +290,32 @@
             return;
         }
 
+        // Optional per-demographic sentence from demo_notes in demographics.yaml,
+        // added to the end of the standard note.
+        const demoNote = MASData.getDemographics().find((d) => d.name === state.demographic).note;
+        const noteText = demoNote ? `${CROSSTAB_NOTE} ${escapeHtml(demoNote)}` : CROSSTAB_NOTE;
         captionEl.style.display = "";
         captionEl.innerHTML =
             !state.isMobile && state.chartView === "stacked"
-                ? `${CROSSTAB_NOTE}<br>${LEGEND_HINT}`
-                : CROSSTAB_NOTE;
+                ? `${noteText}<br>${LEGEND_HINT}`
+                : noteText;
+
+        // Groups without a trend series (e.g. ones listed under
+        // excluded_historical in demographics.yaml) can't be selected; a saved
+        // selection of one is treated as no selection.
+        const hasTrendFor = (rawValue) => {
+            const hist = q.has_trend ? MASData.getHistorical(q.key, state.demographic, rawValue) : null;
+            return !!(hist && Object.keys(hist.by_year).length);
+        };
+        const savedValue = SharedState.getSelectedDemoValue(demoColumn);
+        const selectedValue = savedValue != null && hasTrendFor(savedValue) ? savedValue : null;
 
         if (state.isMobile) {
-            // Desktop-only heading stays blank here -- the mobile card list
-            // shows "Response by X Demographic (Year)" itself, styled as
-            // its own heading with the question demoted below it (see
-            // MASMobileViews.renderDemographicCardList), so showing it a
-            // second time up here would just duplicate it.
-            const selectedValue = SharedState.getSelectedDemoValue(demoColumn);
+            // The card list shows its own heading, so the page heading stays blank.
             MASMobileViews.renderDemographicCardList(chartContainer, crosstab, state.demographic, {
                 selectedValue,
                 showTrendButton: q.has_trend,
+                hasTrendFor,
                 onSelectionChange: (rawValueOrNull) => {
                     SharedState.setSelectedDemoValue(demoColumn, rawValueOrNull);
                     renderCrosstabSection();
@@ -370,16 +324,12 @@
                     renderHistoricalChartInto(trendContainerEl, q, rawValue, true);
                 },
             });
-            wireImageButton("crosstab-download-img-btn", null); // mobile's card list isn't a Plotly chart
+            wireImageButton("crosstab-download-img-btn", null); // no Plotly chart on mobile
         } else {
-            // "Response by X Demographic (Year)" -- styled the same
-            // .section-heading blue as the Metro Summary page's card
-            // headings (e.g. "2025 Response Distribution"), rather than
-            // living inside the Plotly chart's own title as a smaller
-            // subtitle.
+            // "Response by X Demographic (Year)"
             headingEl.textContent = crosstab.subtitle;
-            const selectedValue = SharedState.getSelectedDemoValue(demoColumn);
             const onSelect = (rawValue) => {
+                if (!hasTrendFor(rawValue)) return; // no trend chart for this group: ignore the click
                 SharedState.setSelectedDemoValue(demoColumn, rawValue);
                 renderCrosstabSection();
             };
@@ -391,7 +341,7 @@
                 MASCharts.buildDemographicStackedBarChart("demo-stacked-chart", crosstab, state.demographic, selectedValue, onSelect);
             }
             wireImageButton("crosstab-download-img-btn", "demo-stacked-chart", `${crosstabBaseFilename}.png`);
-            renderDesktopHistoricalSection(q, selectedValue);
+            renderDesktopHistoricalSection(q, selectedValue, crosstab.groups.filter((g) => !hasTrendFor(g.group_raw)));
         }
 
         restoreScroll();
@@ -404,15 +354,10 @@
         return div.innerHTML;
     }
 
-    /** Desktop's 3-way branch below the stacked bar chart: an actual
-     * chart, a "click a bar" tip, or a "no historical data" message --
-     * see this file's docstring / demographic_breakdown.py's own
-     * elif-chain for the exact conditions ported here. The "Year-over-Year
-     * Trends" card (a static heading like the Metro Summary page's, wrapping
-     * #historical-container) is shown/hidden as a whole rather than relying
-     * on the container being :empty, since it now always has that heading
-     * as a child even when there's nothing else to show yet. */
-    function renderDesktopHistoricalSection(q, selectedValue) {
+    /** Below the desktop chart, shows one of: the selected group's trend
+     * chart, a "click a bar" tip (nothing selected), or a "no historical
+     * data" message. Shows or hides the whole "Year-over-Year Trends" card. */
+    function renderDesktopHistoricalSection(q, selectedValue, groupsWithoutTrend) {
         const card = document.getElementById("historical-card");
         const container = document.getElementById("historical-container");
         const tipContainer = document.getElementById("tip-container");
@@ -426,14 +371,15 @@
                 renderHistoricalChartInto(container, q, selectedValue, false);
                 return;
             }
-            // Falls through to the generic "no historical data" message below,
-            // matching the server app's own elif-chain behavior for this edge
-            // case (a selected value with no computable historical series).
+            // No series for this group: fall through to the "no data" message.
         }
 
         if (q.has_trend && selectedValue == null) {
             card.style.display = "none";
-            tipContainer.innerHTML = `<div class="tip-box">💡 <strong>Tip:</strong> <em>Click on any bar in the chart above and Scroll Down to see historical trends for that demographic group which will pop up in a lower chart</em></div>`;
+            const noTrendNote = groupsWithoutTrend.length
+                ? ` (historical trends aren't available for ${escapeHtml(groupsWithoutTrend.map((g) => g.group_display).join(", "))})`
+                : "";
+            tipContainer.innerHTML = `<div class="tip-box">💡 <strong>Tip:</strong> <em>Click on any bar in the chart above and Scroll Down to see historical trends for that demographic group which will pop up in a lower chart${noTrendNote}</em></div>`;
         } else {
             card.style.display = "";
             container.innerHTML = `<div class="info-box">Selected question does not have historical data or has no valid time series data.</div>`;
@@ -450,13 +396,12 @@
             return;
         }
         const elId = `historical-chart-${Math.random().toString(36).slice(2)}`;
-        // Desktop's gray Plotly title is now just "Cobb County (Jurisdiction)"
-        // -- the "Historic Response Trends:" prefix is redundant now that
-        // the "Year-over-Year Trends" heading sits above this chart's card.
+        // Desktop title, e.g. "Cobb County (Jurisdiction)"; the card heading
+        // above already says "Year-over-Year Trends".
         const chartTitle = isMobileCard
             ? `Historic ${rawValue} Response`
             : `${rawValue} (${toTitleCase(state.demographic)})`;
-        const historicalNote = "Note: The Historic Response Trends chart shows trends across ALL survey years, regardless of the year filter above.";
+        const historicalNote = `Note: The Historic Response Trends chart shows trends ${q.trend_start_year ? `from ${q.trend_start_year} onward` : "across ALL survey years"}, regardless of the year filter above.`;
         containerEl.innerHTML = `
             <div id="${elId}" class="chart-container"></div>
             <div class="section-caption">${isMobileCard ? historicalNote : `${historicalNote}<br>${LEGEND_HINT}`}</div>`;
@@ -486,8 +431,8 @@
 
     function init() {
         MASData.load().then(() => {
-            const displayOptions = MASData.getQuestions().map((q) => q.display);
-            state.question = SharedState.getSharedQuestion(displayOptions);
+            const questionKeys = MASData.getQuestions().map((q) => q.key);
+            state.question = SharedState.getSharedQuestion(questionKeys);
             const q = currentQuestionRecord();
             state.year = SharedState.getSharedYear(yearOptionsFor(q));
             state.isMobile = SharedState.getIsMobile();

@@ -1,9 +1,7 @@
 /**
- * scrollIndicator.js -- makes the decorative down-arrow button in the
- * bottom-right corner (present on every page) actually do something: a
- * click scrolls the page down by about one screen, then the button fades
- * out and removes itself. Loaded on every page since the button appears
- * on every page, including faq.html, which otherwise loads no JS at all.
+ * scrollIndicator.js -- the down-arrow button in the bottom-right corner of
+ * every page. Clicking it scrolls down about one screen, then the button
+ * fades out and removes itself.
  */
 (function () {
     function init() {

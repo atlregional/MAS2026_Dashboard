@@ -1,9 +1,6 @@
 /**
- * splash.js -- tiny controller for the splash page (index.html). The page
- * is otherwise static HTML (the intro blurb moved here from what's now
- * metro_summary.html); the only dynamic bit is appending a "best viewed
- * on desktop" note to the end of the blurb for mobile visitors, read
- * right into the copy itself rather than interrupting with a popup.
+ * splash.js -- splash page (index.html). Appends a "best viewed on desktop"
+ * note to the intro text for mobile visitors.
  */
 (function () {
     function init() {

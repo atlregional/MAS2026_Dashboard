@@ -1,22 +1,20 @@
 /**
- * metroSummary.js -- page orchestration for the Metro Summary page.
- * Mirrors MAS_Dashboard_App/metro_summary.py's control flow: question
- * picker -> year radio + Topline/Detailed pill -> response distribution
- * -> year-over-year trend. No framework: one state object, and each
- * control's change handler re-renders just the sections that depend on
- * it (matches this build's plan -- full-section innerHTML/Plotly.newPlot
- * rebuilds, no virtual-DOM diffing).
+ * metroSummary.js -- controller for the Metro Summary page: question picker,
+ * year buttons, Topline/Detailed toggle, response distribution chart, and
+ * year-over-year trend chart.
+ *
+ * Selections live in one state object; each change handler re-renders only
+ * the sections that depend on it.
  */
 
 (function () {
     const state = {
-        question: null, // display string
+        question: null, // question key, e.g. "bigprob"
         year: null, // string
         isMobile: false,
     };
 
-    // Desktop only -- the trend chart's legend isn't interactive on mobile
-    // (buildTrendLineChart renders it via staticPlot there).
+    // Desktop only; the trend chart legend isn't interactive on mobile.
     const LEGEND_HINT = "Tip: Click a legend entry to hide that response; double-click one to isolate it.";
 
     function validateYear(year, yearOptions) {
@@ -24,7 +22,7 @@
     }
 
     function currentQuestionRecord() {
-        return MASData.getQuestions().find((q) => q.display === state.question);
+        return MASData.getQuestions().find((q) => q.key === state.question);
     }
 
     function yearOptionsFor(questionRecord) {
@@ -41,24 +39,20 @@
             MASMobileViews.renderQuestionPicker(container, questions, state.question, onQuestionChange);
             return;
         }
-        // The label + picker wrapper is built once and left alone on
-        // later calls -- MASQuestionPicker.render() re-renders just the
-        // picker element itself, so its own listeners (bound once, see
-        // questionPicker.js) don't get re-attached on every question
-        // change.
+        // Build the label and wrapper once; later calls re-render only the picker.
         let pickerEl = document.getElementById("metro-question-picker");
         if (!pickerEl) {
             container.innerHTML = `
-                <label class="field-label" for="metro-question-btn">Choose a question from the MAS 2025 Survey<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</span></span></label>
+                <label class="field-label" for="metro-question-btn">Choose a question from the MAS 2026 Survey<span class="help-icon" tabindex="0">?<span class="help-icon__tooltip">Select a question to display, (No Trend) questions do not have year-over-year trend data whereas (Trend Available) questions do if you scroll down</span></span></label>
                 <div id="metro-question-picker" class="qpicker"></div>`;
             pickerEl = document.getElementById("metro-question-picker");
         }
         MASQuestionPicker.render(pickerEl, questions, state.question, onQuestionChange, "metro-question-btn");
     }
 
-    function onQuestionChange(newDisplay) {
-        state.question = newDisplay;
-        SharedState.setSharedQuestion(newDisplay);
+    function onQuestionChange(newKey) {
+        state.question = newKey;
+        SharedState.setSharedQuestion(newKey);
         const q = currentQuestionRecord();
         const yearOptions = yearOptionsFor(q);
         state.year = validateYear(state.year, yearOptions);
@@ -101,13 +95,9 @@
         });
     }
 
-    /** Wires (or hides) a "Download CSV" button. buildExport() returns
-     * null when there's nothing valid to export right now (no data for
-     * this question/year) -- the button hides rather than downloading a
-     * stale file left over from whatever was last successfully rendered.
-     * Re-run on every render, so .onclick (a plain property, not
-     * addEventListener) always reflects the current data, not a pile of
-     * old listeners each still closing over their own render's data. */
+    /** Shows a "Download CSV" button wired to the current data, or hides it
+     * when buildExport() returns null. Uses .onclick so each render replaces
+     * the previous handler instead of adding another. */
     function wireDownloadButton(btnId, buildExport) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
@@ -121,12 +111,8 @@
         btn.onclick = () => MASCharts.downloadCSV(exportData.filename, exportData.headers, exportData.rows);
     }
 
-    /** Wires (or hides) a "Download Image" button. Unlike wireDownloadButton
-     * above, this has to run *after* the chart itself has actually been
-     * (re)built -- checking a chart's live state any earlier would still
-     * see whatever was left over from the previous render. Pass
-     * chartElementId: null for anything that isn't a live Plotly chart
-     * right now (no data, or mobile's non-Plotly card-list views). */
+    /** Shows a "Download Image" button for a Plotly chart, or hides it when
+     * chartElementId is null (no data, or a mobile view with no Plotly chart). */
     function wireImageButton(btnId, chartElementId, filename) {
         const btn = document.getElementById(btnId);
         if (!btn) return;
@@ -195,14 +181,14 @@
         container.innerHTML = `
             <div id="trend-chart" class="chart-container"></div>
             <div class="section-caption">Note: Remaining percentages are either Don't Know or Not Available.</div>
-            <div class="section-caption">Note: This chart shows trends across ALL survey years, regardless of the year filter above.${state.isMobile ? "" : `<br>${LEGEND_HINT}`}</div>`;
+            <div class="section-caption">Note: This chart shows trends ${q.trend_start_year ? `from ${q.trend_start_year} onward` : "across ALL survey years"}, regardless of the year filter above.${state.isMobile ? "" : `<br>${LEGEND_HINT}`}</div>`;
         wireImageButton("trend-download-img-btn", "trend-chart", `${baseFilename}.png`);
         MASCharts.buildTrendLineChart(
             "trend-chart",
             trend.sort_order,
             trend.colors,
             trend.by_year,
-            "Response Trends Over Time (All Years)",
+            `Response Trends Over Time (${q.trend_start_year ? `${q.trend_start_year} Onward` : "All Years"})`,
             trend.end_date,
             state.isMobile,
             null
@@ -211,8 +197,8 @@
 
     function init() {
         MASData.load().then(() => {
-            const displayOptions = MASData.getQuestions().map((q) => q.display);
-            state.question = SharedState.getSharedQuestion(displayOptions);
+            const questionKeys = MASData.getQuestions().map((q) => q.key);
+            state.question = SharedState.getSharedQuestion(questionKeys);
             const q = currentQuestionRecord();
             state.year = SharedState.getSharedYear(yearOptionsFor(q));
             state.isMobile = SharedState.getIsMobile();

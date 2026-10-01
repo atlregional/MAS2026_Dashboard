@@ -1,10 +1,4 @@
-/* Shared site-wide styles -- ported from MAS_Dashboard_App/lib/chrome.py's
-   injected <style> block and lib/mobile_views.py's inline HTML styles (the
-   mobile card/list styles are reproduced here as real CSS classes instead
-   of being generated as inline `style="..."` per element in JS, a
-   simplification available here that Streamlit's markdown-based rendering
-   didn't have). Colors/spacing/fonts are the same hand-tuned values as the
-   server app; nothing here is a redesign. */
+/* Site-wide styles for every page, including the mobile layouts. */
 
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap');
 
@@ -17,25 +11,11 @@
     --label-color: #333333;
     --track-color: #ececec;
     --border-gray: #808080;
-    /* WCAG 2.2 SC 1.4.3 (4.5:1): #808080 only reaches ~3.95:1 against
-       white and ~2.17:1 for white text on top of it -- this is the same
-       gray, darkened just enough (verified against the exact relative-
-       luminance formula) to clear 4.5:1 in both directions, used only
-       where --border-gray was standing in for *text* (a switch label, an
-       icon's own text) rather than a border. --border-gray itself is left
-       alone since every other place it's used is a non-text border. */
+    /* Darker gray for text; meets WCAG 4.5:1 on white and with white text.
+       --border-gray is for non-text borders only. */
     --accessible-gray: #757575;
-    /* WCAG 2.1/2.2 SC 1.4.11 (3:1): the light grays this was borrowing
-       (#cfcfcf, #e0e0e0) as borders on real form controls (the demographic
-       dropdown, the question-picker panel, year/mode/demographic buttons,
-       the mobile <details> disclosures) only reach ~1.3-1.6:1 against
-       white -- their boundary is essentially imperceptible. This is the
-       same gray family, darkened to clear 3:1 with margin against white,
-       --header-bg, and --card-bg alike. Only used where a light gray was
-       standing in for an interactive control's boundary -- purely
-       decorative dividers/accents (.section-divider, .chart-card,
-       .info-box's stripe, etc.) are untouched since 1.4.11 doesn't apply
-       to them. */
+    /* Border for interactive controls; meets WCAG 3:1 against white,
+       --header-bg and --card-bg. Decorative dividers use lighter grays. */
     --control-border: #8d8d8d;
     --grid-color: #e5e5e5;
     --header-bg: #f9f9f9;
@@ -65,15 +45,13 @@ a {
     padding: 0 1.5rem 3rem;
 }
 
-/* Demographic Breakdown ran a slightly wider column (68rem vs 65rem) in
-   the server app -- preserved exactly, not unified. */
+/* Demographic Breakdown uses a slightly wider column. */
 .page-shell--wide {
     max-width: 68rem;
 }
 
-/* --- Header: logo and nav share one bar, like a typical webpage header.
-   The page's own heading (e.g. "Metro Summary Dashboard") lives in the
-   content area below as .page-title, not in this bar. --- */
+/* --- Header: logos and nav in one bar. The page heading is .page-title,
+   below the header. --- */
 .site-header {
     position: relative;
     background-color: var(--header-bg);
@@ -93,22 +71,13 @@ a {
     flex-wrap: wrap;
 }
 
-/* Groups the ARC logo and the site's own logo together as one flex item,
-   so the pair moves/wraps as a unit against the nav links on the other
-   side of .site-header__inner's space-between. flex-end (not center): the
-   ARC logo is sized to exactly the height of the "METRO ATLANTA SPEAKS"
-   wordmark within the site logo's own SVG (measured at its actual
-   rendered bounding box, top of "METRO ATLANTA" to bottom of "SPEAKS" --
-   ~93.3% of the SVG's full viewBox height, and the wordmark's own bottom
-   happens to already land flush with the SVG's own bottom edge), so
-   bottom-aligning
-   the two logos makes the ARC logo's top and bottom land exactly on the
-   wordmark's top and bottom, without needing to know the icon's own
-   separate bounds. */
+/* The ARC logo and site logo, kept together as one flex item. Bottom-
+   aligned because the ARC logo is sized to the height of the "METRO
+   ATLANTA SPEAKS" wordmark, which sits at the bottom of the site logo. */
 .site-header__brand {
     display: flex;
     align-items: flex-end;
-    gap: 16px;
+    gap: 6px;
 }
 
 .site-header__arc-logo {
@@ -131,12 +100,9 @@ a {
     display: block;
 }
 
-/* --- Nav (sits inline with the logo inside .site-header__inner on
-   desktop; becomes a hamburger-triggered dropdown on mobile -- see the
-   max-width:768px block below). The checkbox/label pair is a pure-CSS
-   toggle (no JS): the checkbox is invisible, the label is the visible
-   hamburger button, and `:checked ~ .site-nav` reveals the panel. This
-   keeps the menu working even on faq.html, which loads no JS at all. --- */
+/* --- Nav: inline with the logo on desktop, a hamburger dropdown on
+   mobile (see the max-width:768px block). The hamburger is a CSS-only
+   checkbox toggle, so it works on pages that load no JS. --- */
 .nav-toggle-checkbox {
     display: none;
 }
@@ -151,8 +117,7 @@ a {
     flex-wrap: wrap;
 }
 
-/* --- Page title (moved out of the header bar; renders below it, at the
-   top of each page's own content area) --- */
+/* --- Page title, at the top of each page's content --- */
 .page-title {
     color: var(--heading-blue);
     font-size: 34px;
@@ -178,10 +143,8 @@ a {
     border-bottom-color: var(--heading-blue);
 }
 
-/* --- Intro blurb (splash page only): headline / subline / fineprint each
-   get their own line instead of running together as one paragraph, so
-   the hierarchy (hook -> key stat -> supporting detail) actually reads
-   as one. --- */
+/* --- Intro blurb (splash page): headline, subline and fine print on
+   separate lines. --- */
 .intro-blurb {
     line-height: 1.5;
     margin-bottom: 1.25rem;
@@ -197,9 +160,7 @@ a {
 .intro-blurb .subline {
     display: block;
     margin-top: 0.5rem;
-    /* #29ABE2 was ~2.6:1 on white -- fails WCAG 2.2 SC 1.4.3 even under
-       the large-text 3:1 allowance. Darkened to #177da9 (~4.6:1), same
-       hue. */
+    /* Meets WCAG 4.5:1 on white. */
     color: #177da9;
     font-size: 20px;
     font-weight: 600;
@@ -228,10 +189,7 @@ a {
 }
 
 .section-caption {
-    /* #8a8a8a was ~3.2:1 on --card-bg -- fails WCAG 2.2 SC 1.4.3 (4.5:1).
-       Reuses --title-font-color (already used for chart titles/subtitles,
-       already verified at ~6.5:1 on --card-bg) for a bit more contrast
-       than the minimum fix needed. */
+    /* Meets WCAG 4.5:1 on --card-bg. */
     color: var(--title-font-color);
     font-size: 14px;
     margin-top: 0.5rem;
@@ -291,10 +249,8 @@ a {
     min-width: 190px;
 }
 
-/* Sized to its own content (not stretched) so the year pills get all the
-   leftover row width instead of splitting it evenly -- pushes this
-   column to sit further right, with just enough room for the pill toggle
-   itself, which lets a full year range (e.g. 2016-2025) fit on one line. */
+/* Sized to its content so the year buttons get the remaining width and a
+   full year range fits on one line. */
 .controls-row__mode {
     flex: 0 0 auto;
 }
@@ -311,12 +267,9 @@ a {
     margin-bottom: 1rem;
 }
 
-/* --- Custom desktop question picker (questionPicker.js) -- replaces a
-   native <select> so the category badge, question text, and trend label
-   can each be individually colored/styled, which no browser allows
-   inside a native <option>. The closed button and every option row share
-   one 3-column grid, so all three pieces start at the same x position
-   everywhere, closed state included. --- */
+/* --- Desktop question picker (questionPicker.js). The button and every
+   option share one 3-column grid (category | question | trend) so the
+   columns line up. --- */
 .qpicker {
     position: relative;
 }
@@ -382,12 +335,8 @@ a {
     background: #eaf3fb;
 }
 
-/* WCAG 2.1/2.2 SC 1.4.11 (3:1): removing the outline and relying only on
-   the #eaf3fb tint above left keyboard focus almost invisible (~1.1:1
-   against the panel's white background) -- fine as a mouse-hover cue,
-   nowhere near enough as the *only* indicator of which option is
-   focused. Keyboard focus gets its own real outline (~6.2:1) on top of
-   the same tint, rather than just the tint alone. */
+/* Keyboard focus gets a visible outline; the background tint alone is
+   too faint (WCAG 3:1). */
 .qpicker__option:focus {
     background: #eaf3fb;
     outline: 2px solid var(--heading-blue);
@@ -427,26 +376,19 @@ a {
 }
 
 .qpicker-trend--available {
-    /* #15803d was ~4.47:1 on the option-row hover/selected background
-       (#eaf3fb) -- just under WCAG 2.2 SC 1.4.3's 4.5:1. Darkened
-       fractionally to #157e3c (~4.6:1), imperceptibly different. */
+    /* Meets WCAG 4.5:1 on the hover/selected background. */
     color: #157e3c;
     font-weight: 600;
 }
 
 .qpicker-trend--none {
-    /* #9ca3af was ~2.3-2.5:1 depending on background -- fails WCAG 2.2 SC
-       1.4.3 (4.5:1). Darkened to #656e7d, which clears 4.6:1 against
-       both backgrounds it appears on (white and the hover/selected
-       #eaf3fb). */
+    /* Meets WCAG 4.5:1 on white and the hover/selected background. */
     color: #656e7d;
     font-style: italic;
 }
 
-/* --- Inline help tooltip: a small "?" icon next to a field label whose
-   hover/focus popup carries the text Streamlit used to show via each
-   widget's `help=` parameter (a native little (?) affordance next to the
-   label, no static caption taking up permanent page space). --- */
+/* --- Help tooltip: a "?" icon next to a field label that shows help text
+   on hover or focus. --- */
 .help-icon {
     position: relative;
     display: inline-flex;
@@ -456,8 +398,7 @@ a {
     height: 15px;
     margin-left: 6px;
     border-radius: 50%;
-    /* #b0b0b0 gave the white "?" only ~2.17:1 -- fails WCAG 2.2 SC 1.4.3
-       (4.5:1) badly. --accessible-gray clears 4.6:1. */
+    /* Meets WCAG 4.5:1 for the white "?". */
     background: var(--accessible-gray);
     color: white;
     font-size: 10px;
@@ -509,9 +450,7 @@ a {
     display: block;
 }
 
-/* Year selector -- plain colored buttons, same look as .demo-segmented's
-   demographic buttons (solid blue when selected) rather than radio
-   inputs inside pill-shaped labels. */
+/* Year buttons, styled like the demographic buttons (solid blue when selected). */
 .year-radio-group {
     display: flex;
     gap: 0.5rem;
@@ -535,7 +474,7 @@ a {
     color: white;
 }
 
-/* Topline/Detailed pill selector (mirrors st.pills) */
+/* Topline/Detailed toggle */
 .mode-pills {
     display: inline-flex;
     border: 1px solid var(--control-border);
@@ -558,9 +497,7 @@ a {
     color: white;
 }
 
-/* --- Chart card toolbar row: a card's heading plus whatever controls sit
-   next to it (the stacked/small-multiples toggle, a "Download CSV" link)
-   -- reused across every chart card, not just the crosstab's. --- */
+/* --- Chart card toolbar: a card's heading and the controls beside it. --- */
 .chart-card__toolbar {
     display: flex;
     align-items: center;
@@ -573,8 +510,7 @@ a {
     margin: 0;
 }
 
-/* Bottom-right "Download CSV" placement, under a card's chart/caption/tip
-   -- every chart card ends with one of these. */
+/* Download buttons at the bottom right of each chart card. */
 .chart-card__footer {
     display: flex;
     justify-content: flex-end;
@@ -603,24 +539,16 @@ a {
     color: white;
 }
 
-/* A true sliding-switch look: one rounded track holding both labels, with
-   a persistent thumb element that slides between them (positioned by JS in
-   demographicBreakdown.js -- its left/width are set to match whichever
-   button is currently selected, and this transition is what makes it slide
-   rather than snap). The whole track has a single click handler (see
-   switchChartView() in demographicBreakdown.js) so clicking anywhere in it
-   -- not just precisely on the unselected label -- toggles the view, same
-   as a real switch. */
+/* Sliding switch: a rounded track with both labels and a thumb that JS
+   positions under the selected label (demographicBreakdown.js). The
+   transition makes the thumb slide. */
 .chart-view-toggle {
     position: relative;
     display: inline-flex;
     flex: 0 0 auto;
     gap: 2px;
     padding: 3px;
-    /* --border-gray (#808080) only gave the white label text ~3.3-4.0:1
-       here -- fails WCAG 2.2 SC 1.4.3 (4.5:1). --accessible-gray clears
-       4.6:1 in both this direction and the selected-label direction
-       below. */
+    /* Meets WCAG 4.5:1 for the white label text. */
     background: var(--accessible-gray);
     border-radius: 18px;
     cursor: pointer;
@@ -647,11 +575,7 @@ a {
     border: none;
     border-radius: 15px;
     background: transparent;
-    /* Was 85% opacity -- even against the darker --accessible-gray track,
-       that composites to too light a gray to clear 4.5:1 (only pure
-       white does, at ~4.6:1). The selected/unselected states are already
-       clearly distinguished by the white pill background switching sides,
-       so losing this opacity dimming doesn't cost any legibility. */
+    /* Full opacity so the text meets WCAG 4.5:1. */
     color: #ffffff;
     cursor: pointer;
     transition: color 0.2s ease;
@@ -661,12 +585,8 @@ a {
     color: var(--accessible-gray);
 }
 
-/* Crossfade + gentle scale applied to the crosstab chart when switching
-   between stacked and small-multiples (see switchChartView()). Plotly's
-   two layouts are structurally too different (one shared axis vs. N
-   independent subplot axes) to literally morph bar-by-bar, so this fakes
-   the "expanding apart" / "combining back together" feel with a fade-out
-   -> swap -> fade-in instead of an instant cut. */
+/* Fade and scale transition when switching between stacked and small
+   multiples (see switchChartView in demographicBreakdown.js). */
 #crosstab-container {
     transition: opacity 0.18s ease, transform 0.18s ease;
 }
@@ -681,22 +601,15 @@ a {
     transform: scale(1.03);
 }
 
-/* Custom hover tooltip that follows the cursor (see attachCursorTooltip in
-   charts.js), used in place of Plotly's own hover label, which always
-   anchors to the data point (e.g. the end of a bar) rather than the mouse.
-   Appended straight to <body> and positioned `fixed` in viewport
-   coordinates, rather than `absolute` inside the chart's own container --
-   a scrollable container (e.g. small multiples' horizontal-scroll wrapper)
-   would otherwise clip it for any bar near that container's own edge. */
+/* Cursor-following chart tooltip (attachCursorTooltip in charts.js).
+   Fixed-positioned on <body> so scrollable chart wrappers can't clip it. */
 .cursor-tooltip {
     position: fixed;
     display: none;
     pointer-events: none;
     z-index: 1000;
     background: white;
-    /* --grid-color (#e5e5e5) is only ~1.26:1 against white -- fine for a
-       gridline, fails WCAG SC 1.4.11's 3:1 as this tooltip's own
-       boundary. --control-border clears 3.3:1. */
+    /* Meets WCAG 3:1 for the tooltip outline. */
     border: 1px solid var(--control-border);
     border-radius: 6px;
     padding: 6px 10px;
@@ -708,15 +621,13 @@ a {
     white-space: nowrap;
 }
 
-/* Small multiples can be wider than the card (one panel per response
-   category) -- scrolls horizontally within the card instead of squeezing
-   every panel down to illegibility. */
+/* Small multiples can be wider than the card; scroll horizontally. */
 .small-multiples-scroll {
     overflow-x: auto;
     padding-bottom: 6px;
 }
 
-/* Demographic segmented control (mirrors st.segmented_control) */
+/* Demographic buttons (mobile) */
 .demo-segmented {
     display: flex;
     flex-wrap: wrap;
@@ -744,25 +655,14 @@ a {
 /* --- Chart container --- */
 .chart-container {
     width: 100%;
-    /* iOS Safari's native double-tap-to-zoom gesture can misfire on a
-       quick tap over an interactive chart element (reported live: a tap
-       on a mobile line chart's point made the chart visibly resize/
-       "spaz" -- a long-press worked reliably instead, consistent with a
-       double-tap-zoom gesture being misdetected from a fast single tap).
-       "manipulation" disables that double-tap gesture specifically while
-       leaving pinch-to-zoom intact, so this doesn't touch page zoom
-       accessibility -- just the tap-specific gesture that was conflicting
-       with tapping a chart to see its tooltip. */
+    /* Disables double-tap-to-zoom on charts so a quick tap shows the tooltip
+       instead of resizing the chart. Pinch-to-zoom still works. */
     touch-action: manipulation;
 }
 
-/* --- Chart card: the off-white panel behind a section's heading, its
-   chart (Plotly charts render with a transparent background so this
-   shows through -- see charts.js), and its "Note:" caption together, so
-   they read as one unit instead of the chart alone having a backdrop.
-   :empty covers containers (like #historical-container) that are
-   sometimes cleared to nothing -- an empty card would otherwise show as
-   a floating blank box. --- */
+/* --- Chart card: the off-white panel behind a section's heading, chart
+   and caption. Charts have transparent backgrounds so this shows through.
+   Empty cards are hidden. --- */
 .chart-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -775,7 +675,7 @@ a {
     display: none;
 }
 
-/* --- Mobile: label-above-bar rows (ported from mobile_views._bar_row_html) --- */
+/* --- Mobile: label-above-bar rows --- */
 .bar-row {
     margin-bottom: 14px;
 }
@@ -815,7 +715,7 @@ a {
     text-align: right;
 }
 
-/* Mobile topline list title (mirrors render_response_bar_list's italic caption) */
+/* Mobile topline list title */
 .mobile-topline-title {
     font-style: italic;
     color: var(--title-font-color);
@@ -823,7 +723,7 @@ a {
     margin-bottom: 16px;
 }
 
-/* --- Mobile demographic cards (ported from mobile_views.render_demographic_card_list) --- */
+/* --- Mobile demographic cards --- */
 .demo-card-heading {
     font-weight: 600;
     color: var(--heading-blue);
@@ -874,7 +774,7 @@ a {
     background: #eaf3fb;
 }
 
-/* --- Mobile question picker (ported from mobile_views.render_question_picker) --- */
+/* --- Mobile question picker --- */
 .mobile-qpicker {
     border: 1px solid var(--control-border);
     border-radius: 6px;
@@ -892,9 +792,7 @@ a {
     gap: 8px;
 }
 
-/* The current selection's stacked rows need to fill the row (not
-   shrink-wrap to their own content) so the chevron sits at the true
-   right edge and long question text wraps instead of getting squeezed. */
+/* Fill the row so the chevron sits at the right edge and long text wraps. */
 .mobile-qpicker__summary .mobile-qpicker__option-rows {
     flex: 1 1 auto;
     min-width: 0;
@@ -904,8 +802,7 @@ a {
     display: none;
 }
 
-/* Down-arrow affordance so this reads as a dropdown -- flips to point up
-   once expanded (details[open], native to <details>/<summary>). */
+/* Down arrow; points up when the list is open. */
 .mobile-qpicker__summary::after {
     content: "\25BC";
     flex: 0 0 auto;
@@ -924,7 +821,7 @@ a {
 
 .mobile-qpicker__caption {
     font-size: 12px;
-    /* #808080 was ~3.95:1 on white -- fails WCAG 2.2 SC 1.4.3 (4.5:1). */
+    /* Meets WCAG 4.5:1 on white. */
     color: var(--accessible-gray);
     margin-bottom: 6px;
 }
@@ -950,12 +847,8 @@ a {
     cursor: default;
 }
 
-/* Category badge / question / trend label stacked one per line -- a
-   phone screen isn't wide enough for the desktop dropdown's fixed
-   3-column layout (questionPicker.js), so each piece gets its own row
-   instead. A flex column blockifies its children regardless of their own
-   display type, so the shared .qpicker-category/-question/-trend spans
-   (built for that grid) stack correctly here with no changes to them. */
+/* Category, question and trend label stacked one per line to fit a phone
+   screen. */
 .mobile-qpicker__option-rows {
     display: flex;
     flex-direction: column;
@@ -966,11 +859,8 @@ a {
     text-align: left;
 }
 
-/* --- Splash page (index.html): just the intro blurb plus a CTA into the
-   dashboard. The mobile "best viewed on desktop" note used to be a
-   dismissible popup shown on the dashboard pages; it now lives inline at
-   the end of this blurb instead (see splash.js), so there's no popup
-   markup/CSS anymore. --- */
+/* --- Splash page (index.html): intro blurb and a button into the
+   dashboard. --- */
 .splash-shell {
     padding-top: 2rem;
 }
@@ -1046,11 +936,8 @@ a {
     margin-bottom: 0.5rem;
 }
 
-/* --- Scroll indicator: was purely decorative in the server app (a CSS
-   rule shipped on every page with no click handler ever wired to it
-   there); this build makes it a real button -- click scrolls the page
-   down about one screen, then it fades out and removes itself (see
-   js/scrollIndicator.js, loaded on every page). --- */
+/* --- Scroll indicator: clicking scrolls down about one screen, then the
+   button fades out (js/scrollIndicator.js). --- */
 .scroll-indicator {
     position: fixed;
     bottom: 30px;
@@ -1111,9 +998,7 @@ a {
     display: none;
 }
 
-/* Down-arrow affordance -- same pattern as .mobile-qpicker__summary --
-   so it's clear each question is expandable, and flips to point up once
-   a question is open (details[open], native to <details>/<summary>). */
+/* Down arrow; points up when a question is open. */
 .faq-item__summary::after {
     content: "\25BC";
     flex: 0 0 auto;
@@ -1145,7 +1030,7 @@ a {
         height: 39.2px;
     }
     .site-header__brand {
-        gap: 10px;
+        gap: 4px;
     }
     .site-header__logo img {
         height: 42px;
@@ -1160,8 +1045,7 @@ a {
         flex-direction: column;
     }
 
-    /* Hamburger button replaces the horizontal nav row, which was
-       wrapping to two lines on narrow phone screens. */
+    /* Hamburger button in place of the nav links on narrow screens. */
     .nav-toggle-btn {
         display: flex;
         flex-direction: column;

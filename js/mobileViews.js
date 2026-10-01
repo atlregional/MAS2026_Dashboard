@@ -1,18 +1,9 @@
 /**
- * mobileViews.js -- mobile-specific rendering: label-above-bar lists
- * instead of bar charts, and a tap-to-select demographic card list.
- * Mirrors MAS_Dashboard_App/lib/mobile_views.py's design (see that
- * module's docstring for *why* mobile doesn't just use a rotated bar
- * chart) -- ported as real DOM/CSS instead of st.markdown(unsafe_allow_
- * html=True) strings.
- *
- * Notably simpler here than the Python version in one respect: the
- * Income demographic's "$25k-$60k"-style labels needed a manual
- * `_escape_dollar()` workaround in the server app because Streamlit's
- * markdown renderer mistook "$...$" pairs for LaTeX math delimiters. That
- * whole bug class cannot exist in this build -- there's no markdown
- * parser in the loop at all, just plain HTML text nodes built with
- * escapeHtml() below, so a literal "$" is never special.
+ * mobileViews.js -- phone layouts built from HTML/CSS instead of Plotly:
+ * label-above-bar lists for response distributions, one card per
+ * demographic group, and the mobile question picker. Long response labels
+ * stay readable at phone width this way, where a Plotly bar chart would
+ * squeeze them.
  */
 
 const MASMobileViews = (() => {
@@ -39,8 +30,7 @@ const MASMobileViews = (() => {
         </div>`;
     }
 
-    /** Mobile equivalent of MASCharts.buildToplineBarChart -- returns an
-     * HTML string (caller sets it via innerHTML). */
+    /** Mobile version of the topline bar chart. Returns an HTML string. */
     function responseBarListHTML(sortOrder, colors, percents, questionTitle) {
         const rows = sortOrder
             .filter((r) => percents[r] !== undefined)
@@ -52,10 +42,9 @@ const MASMobileViews = (() => {
     }
 
     /**
-     * Mobile equivalent of MASCharts.buildDemographicStackedBarChart: one
-     * card per demographic group, with a disclosure-toggle button that
-     * selects the group for the historical-trend section. Renders
-     * directly into `container` and wires up click handlers.
+     * Mobile version of the demographic stacked bar chart: one card per
+     * demographic group, each with a button that shows or hides that group's
+     * historical trend. Renders directly into `container`.
      *
      * @param {HTMLElement} container
      * @param {{question_title, subtitle, response_sort_order, colors, groups, has_custom_order}} crosstab
@@ -63,30 +52,24 @@ const MASMobileViews = (() => {
      * @param {Object} opts
      * @param {string|null} opts.selectedValue -- currently-selected group_raw, or null
      * @param {boolean} opts.showTrendButton -- false when the question has no trend data at all
-     * @param {(rawValue:string|null)=>void} opts.onSelectionChange -- called with the new selection
-     *        (or null if the click deselected) immediately when a button is tapped, BEFORE
-     *        the trend callback -- lets the caller persist state and re-render
+     * @param {(rawValue:string)=>boolean} [opts.hasTrendFor] -- false for a group with no
+     *        trend series, which then gets no trend button
+     * @param {(rawValue:string|null)=>void} opts.onSelectionChange -- called with the new
+     *        selection (null when deselecting) so the caller can save it and re-render
      * @param {(containerEl:HTMLElement, rawValue:string)=>void} [opts.renderTrendForSelected] --
-     *        called with a freshly-created container element right after the selected card,
-     *        mirroring render_demographic_card_list's render_trend_for_selected parameter
+     *        draws the selected group's trend into a container inside its card
      */
     function renderDemographicCardList(container, crosstab, demographicLabel, opts) {
         const { response_sort_order: responseSortOrder, colors, groups, question_title: questionTitle, subtitle, has_custom_order: hasCustomOrder } = crosstab;
-        const { selectedValue, showTrendButton, onSelectionChange, renderTrendForSelected } = opts;
+        const { selectedValue, showTrendButton, hasTrendFor, onSelectionChange, renderTrendForSelected } = opts;
         const sortWithinGroupByPercent = !hasCustomOrder;
 
-        // See charts.js's buildDemographicStackedBarChart for why this is
-        // the array order as-is, not re-sorted: build_static_data.py
-        // already wrote crosstab.groups out in the correct display order.
+        // crosstab.groups is already in display order.
         const orderedGroups = groups.map((g) => g.group_display);
 
         container.innerHTML = "";
 
-        // "Response by X Demographic (Year)" leads, styled as the bold
-        // blue heading (matches the desktop card's .section-heading
-        // treatment); the actual survey question follows underneath in
-        // the plain grey subtitle style -- the reverse of both the order
-        // and the styling the question/subtitle originally had.
+        // "Response by X Demographic (Year)" heading, then the survey question.
         const heading = document.createElement("div");
         heading.className = "demo-card-heading";
         heading.textContent = subtitle;
@@ -100,7 +83,8 @@ const MASMobileViews = (() => {
         for (const groupDisplay of orderedGroups) {
             const group = groups.find((g) => g.group_display === groupDisplay);
             if (!group) continue;
-            const isSelected = showTrendButton && selectedValue === group.group_raw;
+            const groupHasTrend = showTrendButton && (!hasTrendFor || hasTrendFor(group.group_raw));
+            const isSelected = groupHasTrend && selectedValue === group.group_raw;
 
             let responseOrder;
             if (sortWithinGroupByPercent) {
@@ -119,7 +103,7 @@ const MASMobileViews = (() => {
                 ${rowsHtml}`;
             container.appendChild(card);
 
-            if (showTrendButton) {
+            if (groupHasTrend) {
                 const btn = document.createElement("button");
                 btn.className = "demo-card__button";
                 btn.type = "button";
@@ -141,50 +125,36 @@ const MASMobileViews = (() => {
         }
     }
 
-    /**
-     * Mobile equivalent of the native <select> question picker: a
-     * collapsed-by-default <details> holding one full-width button per
-     * question. Ported straight from render_question_picker (see its
-     * docstring in lib/mobile_views.py for why Streamlit's native
-     * dropdown couldn't be used on mobile at all) -- here it's simply the
-     * more direct implementation, since a native <button> already wraps
-     * long text with no virtualization to work around.
-     *
-     * Each option shows the same category badge / question / trend label
-     * pieces as the desktop custom dropdown (see questionPicker.js, whose
-     * category color map and category/question split this reuses), but
-     * stacked one per line instead of in fixed-width columns -- a phone
-     * screen isn't wide enough for the desktop's 3-column alignment.
-     *
-     * @param {HTMLElement} container
-     * @param {Array} questions -- MASData.getQuestions() records
-     * @param {string} currentDisplay -- q.display of the selected question
-     * @param {(display:string)=>void} onSelect
-     */
-    /** The stacked category-badge/question/trend-label rows shared by the
-     * closed <summary> (showing the current selection) and every option
-     * in the open list -- so the collapsed picker reads the same way as
-     * an expanded row, instead of falling back to the old flat
-     * "CATEGORY| question (Trend label)" string once collapsed. */
+    /** Category badge, question and trend label stacked vertically; used for
+     * the collapsed summary and each option. */
     function stackedRowsHTML(q) {
-        const { category, question } = MASQuestionPicker.splitShort(q.short);
-        const style = MASQuestionPicker.categoryStyle(category);
+        const style = MASQuestionPicker.categoryStyle(q.category);
         const trendClass = q.has_trend ? "qpicker-trend--available" : "qpicker-trend--none";
         const trendText = q.has_trend ? "Trend Available" : "No Trend";
         return `
             <span class="mobile-qpicker__option-rows">
-                <span class="qpicker-category" style="color:${style.color};background:${style.bg}">${style.emoji} ${escapeHtml(category)}</span>
-                <span class="qpicker-question">${escapeHtml(question)}</span>
+                <span class="qpicker-category" style="color:${style.color};background:${style.bg}">${style.emoji} ${escapeHtml(q.category)}</span>
+                <span class="qpicker-question">${escapeHtml(q.text)}</span>
                 <span class="qpicker-trend ${trendClass}">${trendText}</span>
             </span>`;
     }
 
-    function renderQuestionPicker(container, questions, currentDisplay, onSelect) {
+    /**
+     * Mobile question picker: a collapsible <details> list with one
+     * full-width button per question. Uses the same category badges as the
+     * desktop picker (questionPicker.js), stacked to fit a phone screen.
+     *
+     * @param {HTMLElement} container
+     * @param {Array} questions -- MASData.getQuestions() records
+     * @param {string} currentKey -- q.key of the selected question
+     * @param {(key:string)=>void} onSelect
+     */
+    function renderQuestionPicker(container, questions, currentKey, onSelect) {
         container.innerHTML = "";
         const details = document.createElement("details");
         details.className = "mobile-qpicker";
 
-        const current = questions.find((q) => q.display === currentDisplay) || questions[0];
+        const current = questions.find((q) => q.key === currentKey) || questions[0];
         const summary = document.createElement("summary");
         summary.className = "mobile-qpicker__summary";
         summary.innerHTML = stackedRowsHTML(current);
@@ -195,20 +165,16 @@ const MASMobileViews = (() => {
         body.innerHTML = `<div class="mobile-qpicker__caption">Tap a question below to select it.</div>`;
 
         questions.forEach((q) => {
-            const isCurrent = q.display === currentDisplay;
+            const isCurrent = q.key === currentKey;
             const btn = document.createElement("button");
             btn.className = "mobile-qpicker__option";
             btn.type = "button";
             btn.disabled = isCurrent;
             btn.innerHTML = stackedRowsHTML(q);
             btn.addEventListener("click", () => {
-                // Picking a question from way down in the scrolled-open
-                // list would otherwise leave the page scrolled to wherever
-                // that option was, with the charts updating out of view --
-                // jump back to the top so the newly-selected question (and
-                // its now-updated charts) is what's actually visible.
+                // Scroll to the top so the updated charts are in view.
                 window.scrollTo(0, 0);
-                onSelect(q.display);
+                onSelect(q.key);
             });
             body.appendChild(btn);
         });

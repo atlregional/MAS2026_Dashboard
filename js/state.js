@@ -1,29 +1,14 @@
 /**
- * state.js -- cross-page shared state, backed by sessionStorage. This is
- * the static-site equivalent of the server app's st.session_state (which
- * is shared across every page for the lifetime of one Streamlit session):
- * sessionStorage is scoped to one browser tab and cleared when the tab
- * closes, the closest available match to "one session" without a server.
- * localStorage was deliberately NOT used -- it would persist a visitor's
- * selections indefinitely across separate visits, which the server app
- * never did either.
+ * state.js -- selections shared across pages, stored in sessionStorage so
+ * they last for one browser tab and reset on the next visit.
  *
- * Mirrors lib.session_state.py's helpers:
- *   - shared_question_text / shared_year_text -> keeps the question/year
- *     selection in sync when switching between Metro Summary and
- *     Demographic Breakdown via the Topline/Detailed pill.
- *   - is_mobile -> the mobile/desktop layout toggle, seeded once per
- *     session from a real viewport check (window.matchMedia), a more
- *     direct signal than the server app's User-Agent sniffing ever was.
- *   - saved_demographic -> last-selected demographic type on Demographic
+ *   - question / year: kept in sync between Metro Summary and Demographic
  *     Breakdown.
- *   - mobile_selected_demo_value__{demo_col_raw} -> the selected/clicked
- *     demographic group, scoped by demographic *column* (not by question),
- *     matching the original: a selection carries over across a question
- *     change (still the same demographic type) but resets when the
- *     demographic type itself changes. Used for both desktop's
- *     click-to-drill highlight and mobile's card selection -- one
- *     mechanism serving both, same as the server app.
+ *   - isMobile: layout mode, detected once per tab from the viewport width.
+ *   - savedDemographic: last demographic type chosen on Demographic Breakdown.
+ *   - selected demo value: the clicked demographic group, stored per
+ *     demographic column, so it survives a question change but resets when
+ *     the demographic type changes. Shared by desktop and mobile views.
  */
 
 const SharedState = (() => {
@@ -54,8 +39,8 @@ const SharedState = (() => {
         return validOptions[0];
     }
 
-    function setSharedQuestion(displayValue) {
-        _set(KEYS.question, displayValue);
+    function setSharedQuestion(questionKey) {
+        _set(KEYS.question, questionKey);
     }
 
     function getSharedYear(validOptions) {
@@ -68,10 +53,7 @@ const SharedState = (() => {
         _set(KEYS.year, yearValue);
     }
 
-    /** Seeded once per session from the real viewport width via
-     * matchMedia; there is no manual override anymore (the old "Use
-     * Mobile View" checkbox was removed), so this is the sole source of
-     * truth for the rest of the session/tab. */
+    /** Detected from the viewport width on first call, then fixed for the tab. */
     function getIsMobile() {
         const val = _get(KEYS.isMobile, null);
         if (val !== null) return val;
